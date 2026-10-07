@@ -1,0 +1,1247 @@
+<title>Caja Javier</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+:root {
+  color-scheme: dark;
+  --bg: #21252b;
+  --surface: #2a2f37;
+  --surface2: #343a44;
+  --row-hover: #323a46;
+  --border: rgba(255,255,255,.09);
+  --border-strong: rgba(255,255,255,.16);
+  --text: #f1f3f6;
+  --text2: #b3bcc9;
+  --text3: #868f9b;
+  --num: #c9d0da;
+  --blue: #2BA8E0;
+  --blue-dim: rgba(43,168,224,.16);
+  --green: #2FBF8F;
+  --red: #E2604F;
+  --orange: #E8954A;
+  --purple: #8B7FD6;
+  --radius: 10px;
+  /* series (validadas sobre #2a2f37) */
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #9085e9;
+  --liq: #199e70;
+}
+html, body { background: var(--bg); }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; color: var(--text); font-size: 15px; line-height: 1.5; margin: 0; padding-inline: 2rem; padding-block: 1.75rem 2.5rem; font-variant-numeric: tabular-nums; }
+button, select, input { font: inherit; }
+
+.header { margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-strong); padding-bottom: 1.1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+.header-left { display: flex; align-items: center; gap: 14px; }
+.brand-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 10px var(--blue); flex-shrink: 0; }
+.header-left h1 { font-size: 26px; font-weight: 600; margin: 0; }
+.header-sub { font-size: 13px; color: var(--text2); margin-top: 2px; }
+.header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 18px; overflow: hidden; }
+.seg button { background: var(--surface2); color: var(--text2); border: 0; padding: 6px 14px; font-size: 13px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--border-strong); }
+.seg button.active { background: var(--blue-dim); color: var(--blue); font-weight: 600; }
+.btn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text2); background: transparent; border: 1px solid var(--border-strong); border-radius: 7px; padding: 7px 13px; cursor: pointer; transition: all .15s; }
+.btn:hover { border-color: var(--blue); color: var(--text); }
+.btn[hidden] { display: none; }
+.btn:focus-visible, .seg button:focus-visible, .period-chip:focus-visible, .mode-tab:focus-visible, th.sortable:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.data-meta { font-size: 12.5px; color: var(--text3); margin: -0.6rem 0 1.25rem; display: flex; gap: 6px 16px; flex-wrap: wrap; }
+.data-meta b { color: var(--text2); font-weight: 600; }
+.notice { font-size: 13px; color: var(--text2); background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px; padding: 10px 14px; margin-bottom: 1rem; }
+.notice.err { border-color: var(--red); color: var(--red); }
+.control { font-size: 12.5px; color: var(--text3); margin: -0.4rem 0 .9rem; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.control .ok { color: var(--green); } .control .warn { color: var(--orange); }
+#cobros-note .warn { color: var(--orange); }
+.control b { color: var(--text2); }
+
+.section-label { font-size: 12px; font-weight: 700; color: var(--blue); text-transform: uppercase; letter-spacing: .12em; margin: 2.25rem 0 .35rem; }
+.section-note { font-size: 13px; color: var(--text3); margin: 0 0 .9rem; max-width: 110ch; }
+.section-note b { color: var(--text); font-weight: 600; }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.kpi-grid.auto { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--border-strong); border-radius: var(--radius); padding: 16px 18px; min-width: 0; }
+.kpi.pos { border-top-color: var(--green); } .kpi.neg { border-top-color: var(--red); }
+.kpi.kpi-blue { border-top-color: var(--blue); } .kpi.kpi-purple { border-top-color: var(--purple); } .kpi.kpi-orange { border-top-color: var(--orange); } .kpi.kpi-liq { border-top-color: var(--liq); }
+.kpi-label { font-size: 13px; color: var(--text2); margin-bottom: 8px; }
+.kpi-val { font-size: 23px; font-weight: 600; overflow-wrap: anywhere; }
+.kpi-val.pos { color: var(--green); } .kpi-val.neg { color: var(--red); }
+.kpi-sub { font-size: 12.5px; margin-top: 6px; color: var(--text3); }
+.kpi-sub b { color: var(--text2); font-weight: 600; }
+.kpi.hero { background: linear-gradient(180deg, rgba(47,191,143,.13), rgba(47,191,143,.04)); border-color: rgba(47,191,143,.35); }
+.kpi.hero .kpi-val { font-size: 27px; }
+.resumen { display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px; margin-bottom: 16px; }
+.resumen .rb { background: var(--surface2); border-radius: 8px; padding: 10px 14px; min-width: 150px; flex: 1; }
+.resumen .rb .rl { font-size: 12px; color: var(--text3); }
+.resumen .rb .rv { font-size: 18px; font-weight: 600; color: var(--text); margin: 2px 0; }
+.resumen .rb .rv.pos { color: var(--green); } .resumen .rb .rv.neg { color: var(--red); }
+.resumen .op { align-self: center; color: var(--text3); font-size: 18px; }
+.resumen .rb.res { background: rgba(47,191,143,.13); border: 1px solid rgba(47,191,143,.4); }
+.resumen .rb.res .rv { color: var(--green); font-size: 22px; }
+.resumen .rb.res.negative { background: rgba(226,96,79,.12); border-color: rgba(226,96,79,.4); }
+.resumen .rb.res.negative .rv { color: var(--red); }
+tr.closed-row td { color: var(--text2); font-style: italic; }
+.pos { color: var(--green); } .neg { color: var(--red); }
+
+.charts-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-top: 3px solid rgba(43,168,224,.35); border-radius: var(--radius); padding: 20px; min-width: 0; }
+.card + .card, .charts-2 + .card, .card + .charts-2, .charts-2 + .charts-2, .table-card + .charts-2, .table-card + .card { margin-top: 16px; }
+.charts-2 > .card, .charts-2 > .table-card { margin-top: 0; }
+.card-title { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+.card-sub { font-size: 12.5px; color: var(--text3); margin: 0 0 12px; }
+.chart-wrap { position: relative; width: 100%; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-bottom: 8px; font-size: 13px; color: var(--text2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 11px; height: 11px; border-radius: 2px; flex-shrink: 0; display: inline-block; }
+/* detalle al pasar el mouse: vive arriba del gráfico, no lo tapa */
+.hover-strip { min-height: 22px; font-size: 12.5px; color: var(--text3); margin-bottom: 8px; display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
+.hover-strip > b { color: var(--text); font-weight: 600; }
+.hover-strip .hs-item { display: inline-flex; align-items: center; gap: 6px; color: var(--text2); }
+.hover-strip .hs-item b { color: var(--text); }
+
+.stackbar { display: flex; height: 28px; border-radius: 5px; overflow: hidden; gap: 2px; }
+.stackbar > div { height: 100%; min-width: 2px; display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.35); overflow: hidden; white-space: nowrap; }
+.stack-row + .stack-row { margin-top: 18px; }
+.stack-head { font-size: 13px; color: var(--text2); margin-bottom: 7px; }
+
+/* PERIOD BAR */
+.period-bar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 8px; }
+.period-row { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.period-label { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); min-width: 58px; flex-shrink: 0; }
+.period-label.year-row-label { cursor: pointer; } .period-label.year-row-label:hover { color: var(--blue); }
+.period-chip, .mode-tab { padding: 6px 14px; border-radius: 18px; border: 1px solid var(--border-strong); background: var(--surface2); color: var(--text2); font-size: 13px; cursor: pointer; transition: all .15s; user-select: none; }
+.period-chip:hover, .mode-tab:hover { color: var(--text); border-color: var(--blue); }
+.period-chip.active, .mode-tab.active { background: var(--blue-dim); border-color: var(--blue); color: var(--blue); font-weight: 600; }
+.range-hint { font-size: 11.5px; color: var(--text3); }
+.range-bar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 1.25rem; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.range-bar label { display: inline-flex; align-items: center; gap: 8px; font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); }
+.date { background: var(--surface2); border: 1px solid var(--border-strong); color: var(--text); border-radius: 7px; padding: 6px 10px; font-size: 13px; color-scheme: dark; letter-spacing: 0; text-transform: none; font-weight: 400; }
+.date:focus { outline: 2px solid var(--blue); outline-offset: 1px; }
+.date { width: 118px; font-variant-numeric: tabular-nums; }
+.date.bad { border-color: var(--red); }
+.dp { position: relative; display: inline-flex; align-items: center; gap: 4px; }
+.dp-btn { background: var(--surface2); border: 1px solid var(--border-strong); color: var(--text2); border-radius: 7px; padding: 6px 8px; cursor: pointer; display: inline-flex; }
+.dp-btn:hover, .dp-btn:focus-visible { color: var(--blue); border-color: var(--blue); outline: none; }
+.dp-pop { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; background: var(--surface2); border: 1px solid var(--border-strong); border-radius: 10px; padding: 10px; width: 264px; box-shadow: 0 10px 28px rgba(0,0,0,.45); }
+.dp-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 8px; }
+.dp-head select { background: var(--surface); color: var(--text); border: 1px solid var(--border-strong); border-radius: 6px; padding: 3px 6px; font-size: 13px; }
+.dp-nav { background: transparent; border: 1px solid var(--border-strong); color: var(--text2); border-radius: 6px; width: 28px; height: 28px; cursor: pointer; }
+.dp-nav:hover { color: var(--text); border-color: var(--blue); }
+.dp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.dp-grid .dow { font-size: 10.5px; color: var(--text3); text-align: center; padding: 3px 0; font-weight: 700; }
+.dp-grid button { background: transparent; border: 0; color: var(--text); border-radius: 6px; height: 30px; font-size: 13px; cursor: pointer; }
+.dp-grid button:hover { background: var(--blue-dim); color: var(--blue); }
+.dp-grid button.out { color: var(--text3); opacity: .45; }
+.dp-grid button.inr { background: rgba(43,168,224,.10); border-radius: 0; }
+.dp-grid button.sel { background: var(--blue); color: #08131c; font-weight: 700; border-radius: 6px; }
+.dp-grid button.today { box-shadow: inset 0 0 0 1px var(--text3); }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.badge { background: var(--blue); color: #08131c; font-size: 13px; font-weight: 600; padding: 5px 14px; border-radius: 20px; letter-spacing: 0; text-transform: none; }
+
+/* TABLES */
+.table-card { background: var(--surface); border: 1px solid var(--border); border-top: 3px solid rgba(43,168,224,.35); border-radius: var(--radius); padding: 20px; min-width: 0; }
+.table-scroll { overflow: auto; }
+.table-scroll.tall { max-height: 540px; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th { font-size: 12px; color: var(--text2); font-weight: 600; padding: 9px 12px; border-bottom: 1px solid var(--border-strong); text-align: right; white-space: nowrap; background: var(--surface); position: sticky; top: 0; z-index: 1; }
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--text); }
+th .arrow { display: inline-block; width: 10px; color: var(--blue); margin-left: 3px; }
+td { padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; color: var(--num); }
+th.l, td.l { text-align: left; }
+td:first-child, th:first-child { position: sticky; left: 0; background: var(--surface); z-index: 1; text-align: left; }
+th:first-child { z-index: 2; }
+tbody tr:not(.total):not(.year-sub):hover td { background: var(--row-hover); }
+td.strong { color: var(--text); font-weight: 600; }
+td.muted { color: var(--text3); }
+td.pos { color: var(--green); } td.neg { color: var(--red); }
+td .sym { font-weight: 600; color: var(--text); }
+td .tag { font-size: 11.5px; color: var(--text3); margin-left: 7px; }
+td .cdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; }
+.chip { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--border-strong); color: var(--text2); }
+.chip.warn { border-color: var(--orange); color: var(--orange); }
+tr.total td { font-weight: 700; color: var(--text); border-top: 2px solid var(--border-strong); border-bottom: none; background: #2f3a47; }
+tr.total td:first-child { color: var(--blue); background: #2f3a47; }
+tr.total td.pos { color: var(--green); } tr.total td.neg { color: var(--red); }
+tr.year-sub td { background: var(--surface2); color: var(--text); font-weight: 600; }
+tr.year-sub td:first-child { background: var(--surface2); }
+tr.next12 td:first-child { box-shadow: inset 3px 0 0 var(--blue); }
+details.closed { margin-top: 14px; }
+details.closed summary { cursor: pointer; color: var(--text2); font-size: 13.5px; padding: 6px 0; }
+details.closed summary:hover { color: var(--text); }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+.search, .fsel { background: var(--surface2); border: 1px solid var(--border-strong); color: var(--text); border-radius: 7px; padding: 7px 11px; font-size: 13px; }
+.search { width: min(260px, 100%); }
+.fsel { max-width: 100%; }
+.search:focus, .fsel:focus { outline: 2px solid var(--blue); outline-offset: 1px; }
+.filters .spacer { flex: 1; }
+.ms { position: relative; }
+.ms-btn { background: var(--surface2); border: 1px solid var(--border-strong); color: var(--text); border-radius: 7px; padding: 7px 30px 7px 11px; font-size: 13px; cursor: pointer; position: relative; white-space: nowrap; }
+.ms-btn::after { content: '▾'; position: absolute; right: 10px; color: var(--text3); }
+.ms-btn.on { border-color: var(--blue); color: var(--blue); }
+.ms-btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+.ms-pop { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; background: var(--surface2); border: 1px solid var(--border-strong); border-radius: 10px; padding: 8px; min-width: 240px; max-height: 320px; overflow: auto; box-shadow: 0 10px 28px rgba(0,0,0,.45); }
+.ms-pop label { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 6px; font-size: 13px; color: var(--text); cursor: pointer; white-space: nowrap; }
+.ms-pop label:hover { background: var(--blue-dim); }
+.ms-pop input { accent-color: var(--blue); }
+.ms-actions { display: flex; justify-content: space-between; gap: 8px; padding: 2px 4px 8px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
+.ms-actions button { background: none; border: 0; color: var(--blue); font-size: 12.5px; cursor: pointer; padding: 2px; }
+
+.footer-meta { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: 12.5px; color: var(--text3); line-height: 1.6; max-width: 110ch; }
+.footer-meta p { margin: 0 0 6px; }
+.footer-meta b { color: var(--text2); }
+
+@media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 900px) {
+  body { padding-inline: 1rem; }
+  .charts-2 { grid-template-columns: 1fr; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 420px) { .kpi-val { font-size: 20px; } .header-left h1 { font-size: 22px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="header">
+  <div class="header-left">
+    <div class="brand-dot"></div>
+    <div>
+      <h1>Caja Javier</h1>
+      <div class="header-sub">Patrimonio, inversiones y flujo de fondos</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="seg" role="group" aria-label="Moneda">
+      <button id="cur-usd" class="active" type="button">Dólar MEP</button>
+      <button id="cur-ars" type="button">Pesos</button>
+    </div>
+    <label class="btn" for="pdf-input" title="Elegí el PDF del estado de cuenta que bajás de PPI (Exportar). Se lee en tu navegador; no se sube a ningún lado.">Cargar estado de cuenta PPI</label>
+    <input id="pdf-input" type="file" accept=".pdf,application/pdf" hidden>
+    <label class="btn" for="xlsx-input" title="Elegí el archivo CAJA NUEVA de tu computadora. Se lee en tu navegador; no se sube a ningún lado.">Cargar Excel actualizado</label>
+    <input id="xlsx-input" type="file" accept=".xlsx,.xlsm" hidden>
+    <button class="btn" id="reset-data" type="button" hidden>Volver a los datos originales</button>
+  </div>
+</div>
+<div class="data-meta" id="data-meta"></div>
+<div id="notice"></div>
+
+<!-- ═══ HOY ═══ -->
+<div class="section-label">Hoy</div>
+<p class="section-note" id="today-note"></p>
+<div class="control" id="ppi-control"></div>
+<div class="kpi-grid" id="kpi-today"></div>
+
+<div class="section-label">Cartera de inversiones</div>
+<p class="section-note">Tocá el título de una columna para ordenar. Bonos y ON: precios por cada 100 nominales, igual que en PPI. El precio actual está en la moneda elegida arriba, así se compara directo con el precio promedio de compra.</p>
+<div class="table-card">
+  <div class="resumen" id="cart-resumen"></div>
+  <div class="table-scroll"><table id="tbl-cartera"></table></div>
+  <details class="closed" id="closed-wrap"><summary id="closed-summary">Posiciones cerradas</summary><div class="table-scroll"><table id="tbl-cerradas"></table></div></details>
+</div>
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+    <div><div class="card-title">Resultado por instrumento</div>
+    <p class="card-sub" id="res-sub">De dónde sale lo que ganaste con cada especie</p></div>
+    <div class="seg" role="group" aria-label="Ver resultado en"><button id="res-usd" class="active" type="button">En dólares</button><button id="res-pct" type="button">En % sobre lo invertido</button></div>
+  </div>
+  <div class="legend" id="lg-resultado"></div>
+  <div class="hover-strip" id="hs-resultado"></div>
+  <div class="chart-wrap" id="res-wrap" style="height:360px"><canvas id="ch-resultado"></canvas></div>
+</div>
+
+<div class="section-label">Dónde está la plata</div>
+<div class="charts-2">
+  <div class="card">
+    <div class="card-title">Por lugar</div>
+    <p class="card-sub">Liquidez e inversiones en cada cuenta o caja</p>
+    <div class="legend"><span><span class="dot" style="background:var(--liq)"></span>Liquidez</span><span><span class="dot" style="background:var(--s1)"></span>Inversiones</span></div>
+    <div class="hover-strip" id="hs-lugar"></div>
+    <div class="chart-wrap" style="height:230px"><canvas id="ch-lugar"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Por tipo de activo</div>
+    <p class="card-sub">Participación sobre el patrimonio total</p>
+    <div class="hover-strip" id="hs-clase"></div>
+    <div class="chart-wrap" style="height:262px"><canvas id="ch-clase"></canvas></div>
+  </div>
+</div>
+<div class="table-card" style="margin-top:16px">
+  <div class="card-title">Liquidez por lugar y moneda</div>
+  <p class="card-sub">Saldos según tu base. En PPI, los dólares MEP son los "billete" y los CCL los "divisas" del estado de cuenta.</p>
+  <div class="table-scroll"><table id="tbl-liq"></table></div>
+</div>
+<div class="card">
+  <div class="card-title">Exposición</div>
+  <p class="card-sub">Cómo se reparte el patrimonio total</p>
+  <div id="exposicion"></div>
+</div>
+
+<div class="card">
+  <div class="card-title">Rendimiento por año</div>
+  <p class="card-sub">Cuánto rindió cada año lo invertido en PPI, descontando lo que pusiste y sacaste en el año. Complementa la TIR de todo el historial. Cada año usa la valuación al 31/12 del año anterior y al 31/12 de ese año: estados de cuenta de PPI desde 2023 y precio de mercado del GD35 para 2021 y 2022 (el año en curso usa el último estado cargado). Antes de 2021 no hay precios confiables disponibles.</p>
+  <div class="hover-strip" id="hs-anual"></div><div class="chart-wrap" style="height:230px"><canvas id="ch-anual"></canvas></div>
+  <div class="table-scroll" style="margin-top:14px"><table id="tbl-anual"></table></div>
+</div>
+
+<div class="section-label">Cobros futuros de bonos y ON</div>
+<p class="section-note" id="cobros-note"></p>
+<div class="charts-2">
+  <div class="card">
+    <div class="card-title">Por año</div>
+    <div class="legend"><span><span class="dot" style="background:var(--s1)"></span>Renta (cupones)</span><span><span class="dot" style="background:var(--s4)"></span>Amortización (devolución de capital)</span></div>
+    <div class="hover-strip" id="hs-cobros"></div>
+    <div class="chart-wrap" style="height:300px"><canvas id="ch-cobros"></canvas></div>
+  </div>
+  <div class="table-card">
+    <div class="card-title">Detalle de pagos</div>
+    <p class="card-sub">Marca azul a la izquierda = próximos 12 meses</p>
+    <div class="table-scroll tall" style="max-height:340px"><table id="tbl-cobros"></table></div>
+  </div>
+</div>
+
+<!-- ═══ PERÍODO ═══ -->
+<div class="section-label" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">Ingresos, gastos y rentas <span class="badge" id="period-badge">—</span></div>
+<p class="section-note">Por defecto se ve todo el historial. Elegí las fechas en el calendario o usá un atajo; afecta a todo lo que sigue.</p>
+<div class="range-bar">
+  <label for="rg-from">Desde</label><div class="dp"><input type="text" id="rg-from" class="date" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off"><button type="button" class="dp-btn" data-for="rg-from" aria-label="Abrir calendario de la fecha desde"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6.5h12M5 1.5v3M11 1.5v3"/></svg></button><div class="dp-pop" hidden></div></div>
+  <label for="rg-to">Hasta</label><div class="dp"><input type="text" id="rg-to" class="date" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off"><button type="button" class="dp-btn" data-for="rg-to" aria-label="Abrir calendario de la fecha hasta"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6.5h12M5 1.5v3M11 1.5v3"/></svg></button><div class="dp-pop" hidden></div></div>
+  <div class="presets" id="presets"></div>
+</div>
+<div class="kpi-grid auto" id="kpi-period"></div>
+
+<div class="section-label">Movimientos</div>
+<div class="table-card">
+  <div class="filters">
+    <div class="ms" id="ms-lugar"></div>
+    <div class="ms" id="ms-mov"></div>
+    <div class="ms" id="ms-esp"></div>
+    <input class="search" id="mov-search" type="search" placeholder="Buscar en la descripción…" aria-label="Buscar en la descripción">
+    <span class="spacer"></span><span class="range-hint" id="mov-count"></span>
+  </div>
+  <div class="table-scroll tall"><table id="tbl-mov"></table></div>
+</div>
+
+<div class="charts-2" style="margin-top:16px">
+  <div class="card">
+    <div class="card-title">Honorarios por cliente</div>
+    <div class="legend" id="lg-clientes"></div>
+    <div class="hover-strip" id="hs-clientes"></div>
+    <div class="chart-wrap" style="height:250px"><canvas id="ch-clientes"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Rentas cobradas</div>
+    <div class="legend" id="lg-rentas"></div>
+    <div class="hover-strip" id="hs-rentas"></div>
+    <div class="chart-wrap" style="height:250px"><canvas id="ch-rentas"></canvas></div>
+  </div>
+</div>
+<div class="card">
+  <div class="card-title">Evolución del patrimonio</div>
+  <p class="card-sub">Fin de cada mes desde enero 2025, sin importar las fechas elegidas arriba. Por ahora las inversiones van al precio que pagaste porque no hay precios históricos cargados; el punto naranja es el patrimonio de hoy a precio de mercado. Con la API de PPI la línea pasa a ser a precio de mercado mes a mes.</p>
+  <div class="legend"><span><span class="dot" style="background:var(--s1)"></span>Patrimonio (inversiones al costo)</span><span><span class="dot" style="background:var(--liq)"></span>Liquidez</span><span><span class="dot" style="background:var(--s2);border-radius:50%"></span>Hoy a precio de mercado</span></div>
+  <div class="hover-strip" id="hs-evol"></div>
+  <div class="chart-wrap" style="height:280px"><canvas id="ch-evol"></canvas></div>
+</div>
+
+<div class="footer-meta" id="footer"></div>
+
+<script>
+// ══ DATOS EMBEBIDOS ══
+const EMBEDDED_ROWS = [["2017-04-14","Compra Bonos Pary 2038 (reestructurado a GD41 el 09/07/2020 y luego canjeado a GD35)","PPI","BONOS","GD35","Compra / Suscripcion","INGRESO","BONOS",30075,20000,"","","SI"],["2017-10-03","Intereses Ganados por 30,075 bonos Pary 2038 (1,25%)","PPI","BONOS","GD35","Cupones","INGRESO","USD",null,380,"","","NO"],["2018-03-31","Intereses Ganados por 30,075 bonos Pary 2038 (1,25%)","PPI","BONOS","GD35","Cupones","INGRESO","USD",null,400,"","","NO"],["2018-09-30","Intereses Ganados por 30,075 bonos Pary 2038 (1,25%)","PPI","BONOS","GD35","Cupones","INGRESO","USD",null,400,"","","NO"],["2019-03-31","Intereses Ganados por 30,075 bonos Pary 2038 (1,25%)","PPI","BONOS","GD35","Cupones","INGRESO","USD",null,400,"","","NO"],["2019-09-30","Intereses Ganados por 30,075 bonos Pary 2038 (3,75%)","PPI","BONOS","GD35","Cupones","INGRESO","USD",null,563.91,"","","NO"],["2020-03-31","Intereses Ganados por 30,075 bonos Pary 2038 (3,75%)","PPI","BONOS","GD35","Cupones","INGRESO","USD",null,563.91,"","","NO"],["2020-10-27","Compra Cedear Coca Cola","ICBC","CEDEAR","KO","Compra / Suscripcion","INGRESO","CEDEAR",11,125.7553,"","","SI"],["2020-10-27","Compra Cedear MeLi","ICBC","CEDEAR","MELI","Compra / Suscripcion","INGRESO","CEDEAR",10,241.1,"","","SI"],["2021-09-10","Intereses Cobrados por Bonos en poder de Daniel T.","PPI","BONOS","GD35","Cupones","INGRESO","USD",null,33,"","","NO"],["2021-12-31","Canje GD41 → GD35 (fecha aproximada: Javier no recuerda la fecha exacta)","PPI","BONOS","GD35","Canje","INGRESO","BONOS",1011,0,"","","SI"],["2022-01-12","Cobro intereses bonos GD 35","PPI","BONOS","GD35","Cupones","INGRESO","USD",null,180,"","","NO"],["2022-07-26","Cobro intereses bonos GD 35","PPI","BONOS","GD35","Cupones","INGRESO","USD",null,175,"","","NO"],["2023-02-27","Cobro intereses bonos GD 35","PPI","BONOS","GD35","Cupones","INGRESO","USD",null,233,"","","NO"],["2023-07-11","Cobro Intereses GD35 0,75%","PPI","BONOS","GD35","Cupones","INGRESO","USD",null,233.14,"","","NO"],["2024-01-12","Cobro intereses GD35","PPI","BONOS","GD35","Cupones","INGRESO","USD",null,563.43,"","","NO"],["2024-07-10","Cobro intereses GD35","PPI","BONOS","GD35","Cupones","INGRESO","USD",null,563.43,"","","NO"],["2024-09-10","Compra ON YPF (YMCJD) 2033 $ 1,295,329,164 @ 1,216,27","PPI","Ons","YMCJD","Compra / Suscripcion","INGRESO","Ons",1065,1041.46,"","","SI"],["2024-09-30","Renta Ons ","PPI","Ons","YMCJD","Cupones","INGRESO","USD CCL",null,37.27,"","","SI"],["2025-01-01","Saldo inicial ICBC en USD","ICBC","USD","","Saldo inicial","INGRESO","USD",null,9617.85,"","","SI"],["2025-01-01","Saldo inicial en USD","CAJA CASA","USD","","Saldo inicial","INGRESO","USD",null,43919,"","","SI"],["2025-01-01","Saldo Inicial","ICBC","FCI","ALPHA ACCIONES B","Compra / Suscripcion","INGRESO","FCI",8504.7488,265681.999465,"","","SI"],["2025-01-01","Saldo Inicial","ICBC","FCI","ALPHA RENTA CAPITAL PESOS","Compra / Suscripcion","INGRESO","FCI",137.6611,1085257.843879,"","","SI"],["2025-01-01","Saldo Inicial","ICBC","FCI","ALPHA PESOS PLUS","Compra / Suscripcion","INGRESO","FCI",196.4553,972078.919898,"","","SI"],["2025-01-01","Saldo Inicial","ICBC","FCI","ALPHA MERCOSUR B","Compra / Suscripcion","INGRESO","FCI",0.1111,2757.764314,"","","SI"],["2025-01-01","Saldo Inicial","ICBC","FCI","ALPHA RENTA CAPITAL B","Compra / Suscripcion","INGRESO","FCI",0.0105,345.380423,"","","SI"],["2025-01-01","Saldo Inicial","ICBC","FCI","ALPHA PLAN CONSERVADOR","Compra / Suscripcion","INGRESO","FCI",38.4696,532187.477543,"","","SI"],["2025-01-01","Saldo Inicial","ICBC","FCI","ALPHA RETORNO TOTAL B","Compra / Suscripcion","INGRESO","FCI",17.69,624505.305658,"","","SI"],["2025-01-01","Saldo Inicial","ICBC","FCI","ALPHA RENTA FIJA SERIE 4","Compra / Suscripcion","INGRESO","FCI",35.2471,412035.666371,"","","SI"],["2025-01-01","Saldo inicial en USD","CAJA BRIAN","USD","","Saldo inicial","INGRESO","USD",null,10000,"","","SI"],["2025-01-01","Saldo inicial en USD","CAJA DANIEL T","USD","","Saldo inicial","INGRESO","USD",null,20000,"","","SI"],["2025-01-06","Honorarios Egali","ICBC","USD","","Cobro Honorarios","INGRESO","USD",null,5000,"Egali","","SI"],["2025-01-09","Saldo inicial ","PPI","$","","Saldo inicial","INGRESO","PESOS",null,895.38,"","","SI"],["2025-01-10","Suscripcioon FCI","PPI","FCI","NOV.LIQ.A","Compra / Suscripcion","INGRESO","FCI",215337.9864,1199999.999842,"","","SI"],["2025-01-10","Compra ON YPF (YMCXD) 2033 $ 1,199,082,49 @ 1,283,71","PPI","Ons","YMCXD","Compra / Suscripcion","INGRESO","Ons",934,1024.78,"","","SI"],["2025-01-10","Renta GD35","PPI","BONOS","GD35","Cupones","INGRESO","USD CCL",null,641.14,"","","SI"],["2025-01-29","Cambio USD 100 a Reales @ 5,45","CAJA CASA","USD","","Gastos","SALIDA","USD",null,100,"","Gastos personales","SI"],["2025-01-31","Posición al 31/01/2025","ICBC","FCI","ALPHA ACCIONES B","Valuacion","INGRESO","FCI",8504.7488,-694.61,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-01-31","Posición al 31/01/2025","ICBC","FCI","ALPHA RENTA CAPITAL PESOS","Valuacion","INGRESO","FCI",137.6611,65432.99,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-01-31","Posición al 31/01/2025","ICBC","FCI","ALPHA PESOS PLUS","Valuacion","INGRESO","FCI",196.4553,24187.79,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-01-31","Posición al 31/01/2025","ICBC","FCI","ALPHA MERCOSUR B","Valuacion","INGRESO","FCI",0.1111,161.89,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-01-31","Posición al 31/01/2025","ICBC","FCI","ALPHA RENTA CAPITAL B","Valuacion","INGRESO","FCI",0.0105,11.65,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-01-31","Posición al 31/01/2025","ICBC","FCI","ALPHA PLAN CONSERVADOR","Valuacion","INGRESO","FCI",38.4696,25172.9,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-01-31","Posición al 31/01/2025","ICBC","FCI","ALPHA RETORNO TOTAL B","Valuacion","INGRESO","FCI",17.69,27711,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-01-31","Posición al 31/01/2025","ICBC","FCI","ALPHA RENTA FIJA SERIE 4","Valuacion","INGRESO","FCI",35.2471,18608.12,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-02-16","Gastos FreeShoop Brasil","CAJA CASA","USD","","Gastos","SALIDA","USD",null,59,"","Gastos personales","SI"],["2025-02-24","Posición al 24/02/2025","PPI","FCI","NOV.LIQ.A","Valuacion","INGRESO","FCI",215337.9864,21498.27,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-02-24","Posición al 31/01/2025","PPI","FCI","NOV.LIQ.A","Valuacion","INGRESO","FCI",215337.986,18543.18,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-02-24","Suscripcioon FCI - Cedears Brasileros","PPI","FCI","ALL.ES.A","Compra / Suscripcion","INGRESO","FCI",1233466.811,1238511.690257,"","","SI"],["2025-02-24","Rescate FCI","PPI","FCI","NOV.LIQ.A","Venta / Rescate","SALIDA","FCI",215337.9864,1240041.452399,"","","SI"],["2025-02-24","Suscripcioon FCI - Cedears Brasileros","PPI","FCI","ALL.ES.A","Compra / Suscripcion","SALIDA","PESOS",null,1238511.69,"","","SI"],["2025-02-24","Rescate FCI","PPI","FCI","NOV.LIQ.A","Venta / Rescate","INGRESO","PESOS",null,1240041.45,"","","SI"],["2025-02-24","Transfer de ICBC a PPI en USD","ICBC","USD","","Movimiento de Caja","SALIDA","USD",null,4500,"","","SI"],["2025-02-24","Transfer de ICBC a PPI en USD","PPI","USD","","Movimiento de Caja","INGRESO","USD",null,4500,"","","SI"],["2025-02-27","Revalorizacion CEDEAR Coca Cola","ICBC","CEDEAR","KO","Valuacion","INGRESO","CEDEAR",null,null,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-02-27","Revalorizacion CEDEAR MeLi","ICBC","CEDEAR","MELI","Valuacion","INGRESO","CEDEAR",null,null,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-02-27","Pago Sidney entradas Universal ICBC","ICBC","USD","","Gastos","SALIDA","USD",null,1806.64,"","Gastos personales","SI"],["2025-02-28","Posición al 28/02/2025","ICBC","FCI","ALPHA ACCIONES B","Valuacion","INGRESO","FCI",8504.7488,-37058.43,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-02-28","Posición al 28/02/2025","ICBC","FCI","ALPHA RENTA CAPITAL PESOS","Valuacion","INGRESO","FCI",137.6611,-3338.42,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-02-28","Posición al 28/02/2025","ICBC","FCI","ALPHA PESOS PLUS","Valuacion","INGRESO","FCI",196.4553,20646.11,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-02-28","Posición al 28/02/2025","ICBC","FCI","ALPHA MERCOSUR B","Valuacion","INGRESO","FCI",0.1111,-329.77,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-02-28","Posición al 28/02/2025","ICBC","FCI","ALPHA RENTA CAPITAL B","Valuacion","INGRESO","FCI",0.0105,2.44,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-02-28","Posición al 28/02/2025","ICBC","FCI","ALPHA PLAN CONSERVADOR","Valuacion","INGRESO","FCI",38.4696,3608.42,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-02-28","Posición al 28/02/2025","ICBC","FCI","ALPHA RETORNO TOTAL B","Valuacion","INGRESO","FCI",17.69,-28727.53,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-02-28","Posición al 28/02/2025","ICBC","FCI","ALPHA RENTA FIJA SERIE 4","Valuacion","INGRESO","FCI",35.2471,4588,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-02-28","Posición al 28/02/2025","PPI","FCI","ALL.ES.A","Valuacion","INGRESO","FCI",1233466.811,-21163.882,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-03-03","Cobro Honorarios Egali - Agosto 2024 - Transfer a hotel Chavo - Traasnfer al hotel el 11/02/2025","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,1202,"Egali","","SI"],["2025-03-10","Pago USD Visa ICBC - Cargo hotel Barra da Tijuca","ICBC","USD","","Gastos","SALIDA","USD",null,470.26,"","Gastos personales","SI"],["2025-03-10","Compra Cedear BRKBD (usd 1.952,20 @ 1.213,65)","PPI","CEDEAR","BRKB","Compra / Suscripcion","INGRESO","CEDEAR",86,1952.2,"","","SI"],["2025-03-10","Cobro Hon Egali","ICBC","USD","","Cobro Honorarios","INGRESO","USD",null,4000,"Egali","","SI"],["2025-03-10","Ajuste saldo usd icbc","ICBC","USD","","Ajuste","INGRESO","USD",null,0.22,"","","SI"],["2025-03-10","Compra Cedear BRKBD","PPI","CEDEAR","BRKB","Compra / Suscripcion","SALIDA","USD",86,1952.2,"","","SI"],["2025-03-10","Compra Cedear BRKBD (Gastos PPI)","PPI","CEDEAR","BRKB","Gastos","SALIDA","USD",null,16.06,"","Comisiones y gastos de inversión","SI"],["2025-03-12","Intereses Cobrados","PPI","Ons","YMCXD","Cupones","INGRESO","USD CCL",null,40.86,"","","SI"],["2025-03-12","Gastos por cobranza intereses Ons","PPI","Ons","YMCJD","Gastos","SALIDA","PESOS",null,460.38,"","Comisiones y gastos de inversión","SI"],["2025-03-21","Inereses ganados en icbc por saldo en caja","ICBC","USD","","Intereses","INGRESO","USD",null,0.1,"","","SI"],["2025-03-25","Le dí usd 15 a Fran y Santi por compra de chocolate","CAJA CASA","USD","","Gastos","SALIDA","USD",null,30,"","Gastos personales","SI"],["2025-03-31","Cobro Hon. Egali (Trasnfer a Ari Grucki, me cobra el 7% en pesos)","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,1000,"Egali","","SI"],["2025-03-31","Posición al 31/03/2025","ICBC","FCI","ALPHA ACCIONES B","Valuacion","INGRESO","FCI",8504.7488,10680.81,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-03-31","Posición al 31/03/2025","ICBC","FCI","ALPHA RENTA CAPITAL PESOS","Valuacion","INGRESO","FCI",137.6611,-13463.11,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-03-31","Posición al 31/03/2025","ICBC","FCI","ALPHA PESOS PLUS","Valuacion","INGRESO","FCI",196.4553,18410.02,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-03-31","Posición al 31/03/2025","ICBC","FCI","ALPHA MERCOSUR B","Valuacion","INGRESO","FCI",0.1111,180.32,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-03-31","Posición al 31/03/2025","ICBC","FCI","ALPHA RENTA CAPITAL B","Valuacion","INGRESO","FCI",0.0105,11.76,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-03-31","Posición al 31/03/2025","ICBC","FCI","ALPHA PLAN CONSERVADOR","Valuacion","INGRESO","FCI",38.4696,-3704.21,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-03-31","Posición al 31/03/2025","ICBC","FCI","ALPHA RETORNO TOTAL B","Valuacion","INGRESO","FCI",17.69,10066.51,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-03-31","Posición al 31/03/2025","ICBC","FCI","ALPHA RENTA FIJA SERIE 4","Valuacion","INGRESO","FCI",35.2471,1974.16,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-03-31","Posición al 31/03/2025","PPI","FCI","ALL.ES.A","Valuacion","INGRESO","FCI",1233466.811,147673.11,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-03-31","Gastos por cobranza intereses Ons","PPI","Ons","YMCXD","Gastos","SALIDA","PESOS",null,422.78,"","Comisiones y gastos de inversión","SI"],["2025-03-31","Renta Ons ","PPI","Ons","YMCJD","Cupones","INGRESO","USD CCL",null,37.27,"","","SI"],["2025-04-03","Compra Cedear VISTA con Pesos (usd 1.004,98 @ 1.319,42)","PPI","CEDEAR","VIST","Compra / Suscripcion","INGRESO","CEDEAR",68,1004.97948,"","","SI"],["2025-04-03","Trasnfer de ICBC a PPI","PPI","$","","Movimiento de Caja","INGRESO","PESOS",null,1350000,"","","SI"],["2025-04-03","Egreso de pesos para compra VISTA","PPI","CEDEAR","VIST","Compra / Suscripcion","SALIDA","PESOS",68,1326000,"","","SI"],["2025-04-03","Cobro honorarios Egali","ICBC","USD","","Cobro Honorarios","INGRESO","USD",null,1500,"Egali","","SI"],["2025-04-03","Gastos PPI compra Cedear Vista","PPI","CEDEAR","VIST","Gastos","SALIDA","PESOS",null,10910.33,"","Comisiones y gastos de inversión","SI"],["2025-04-03","Cobro Dividendos Cedear Coca Cola","ICBC","CEDEAR","KO","Dividendos","INGRESO","USD",null,0.72,"","","SI"],["2025-04-04","Trasnfer de ICBC a PPI","ICBC","USD","","Movimiento de Caja","SALIDA","USD",null,3000,"","","SI"],["2025-04-04","Trasnfer de ICBC a PPI","PPI","USD","","Movimiento de Caja","INGRESO","USD",null,3000,"","","SI"],["2025-04-04","Compra acciones YPF","PPI","ACCIONES","YPFD","Compra / Suscripcion","SALIDA","USD",null,975.15,"","","SI"],["2025-04-04","Compra acciones YPF","PPI","ACCIONES","YPFD","Compra / Suscripcion","INGRESO","ACCIONES",33,975.15,"","","SI"],["2025-04-04","Gastos PPI por compra acciones YPF","PPI","ACCIONES","YPFD","Gastos","SALIDA","USD",null,7.96,"","Comisiones y gastos de inversión","SI"],["2025-04-04","Compra Cedear SPY","PPI","CEDEAR","SPY","Compra / Suscripcion","INGRESO","CEDEAR",57,1473.45,"","","SI"],["2025-04-04","Gastos por Compra Cedear SPY","PPI","CEDEAR","SPY","Gastos","SALIDA","USD",null,12.13,"","Comisiones y gastos de inversión","SI"],["2025-04-04","Compra Cedear SPY","PPI","CEDEAR","SPY","Compra / Suscripcion","SALIDA","USD",null,1473.453,"","","SI"],["2025-04-04","Compra Cedear Tesla","PPI","CEDEAR","TSLA","Compra / Suscripcion","SALIDA","USD",null,1483.95,"","","SI"],["2025-04-04","Compra Cedear Tesla","PPI","CEDEAR","TSLA","Compra / Suscripcion","INGRESO","CEDEAR",91,1483.9461,"","","SI"],["2025-04-04","Gastos Compra Cedear Tesla","PPI","CEDEAR","TSLA","Gastos","SALIDA","USD",null,12.21,"","Comisiones y gastos de inversión","SI"],["2025-04-08","Compra Cedear Vista","PPI","CEDEAR","VIST","Compra / Suscripcion","SALIDA","USD",77,973.25,"","","SI"],["2025-04-08","Compra Cedear Vista","PPI","CEDEAR","VIST","Gastos","SALIDA","USD",null,8.01,"","Comisiones y gastos de inversión","SI"],["2025-04-08","Compra Cedear Vista","PPI","CEDEAR","VIST","Compra / Suscripcion","INGRESO","CEDEAR",77,973.25,"","","SI"],["2025-04-13","Le doy a Cori por gastos Disney","CAJA CASA","USD","","Gastos","SALIDA","USD",null,2000,"","Gastos personales","SI"],["2025-04-21","Inereses ganados en icbc por saldo en caja","ICBC","USD","","Intereses","INGRESO","USD",null,0.09,"","","SI"],["2025-04-22","USA - Adidas Orlando","ICBC","USD","","Gastos","SALIDA","USD",null,13.91,"","Gastos personales","SI"],["2025-04-22","USA - Adidas Orlando","ICBC","USD","","Gastos","SALIDA","USD",null,192.14,"","Gastos personales","SI"],["2025-04-22","USA - Local de futbol","ICBC","USD","","Gastos","SALIDA","USD",null,266.97,"","Gastos personales","SI"],["2025-04-22","USA - Apple Store Iphone 16e","ICBC","USD","","Gastos","SALIDA","USD",null,640,"","Gastos personales","SI"],["2025-04-22","USA - Best Buy","ICBC","USD","","Gastos","SALIDA","USD",null,194.68,"","Gastos personales","SI"],["2025-04-24","USA - Cena en Piola - Miami","ICBC","USD","","Gastos","SALIDA","USD",null,143.51,"","Gastos personales","SI"],["2025-04-24","USA - Apple Store - AirPods mio y cori","ICBC","USD","","Gastos","SALIDA","USD",null,296.39,"","Gastos personales","SI"],["2025-04-25","USA - Gastos en efectivo","CAJA CASA","USD","","Gastos","SALIDA","USD",null,3308,"","Gastos personales","SI"],["2025-04-30","Posición al 30/04/2025","ICBC","FCI","ALPHA ACCIONES B","Valuacion","INGRESO","FCI",8504.7488,-23286.65,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-04-30","Posición al 30/04/2025","ICBC","FCI","ALPHA RENTA CAPITAL PESOS","Valuacion","INGRESO","FCI",137.6611,51633.62,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-04-30","Posición al 30/04/2025","ICBC","FCI","ALPHA PESOS PLUS","Valuacion","INGRESO","FCI",196.4553,24824.49,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-04-30","Posición al 30/04/2025","ICBC","FCI","ALPHA MERCOSUR B","Valuacion","INGRESO","FCI",0.1111,-227.41,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-04-30","Posición al 30/04/2025","ICBC","FCI","ALPHA RENTA CAPITAL B","Valuacion","INGRESO","FCI",0.0105,3.45,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-04-30","Posición al 30/04/2025","ICBC","FCI","ALPHA PLAN CONSERVADOR","Valuacion","INGRESO","FCI",38.4696,24292.5,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-04-30","Posición al 30/04/2025","ICBC","FCI","ALPHA RETORNO TOTAL B","Valuacion","INGRESO","FCI",17.69,-2166.27,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-04-30","Posición al 30/04/2025","ICBC","FCI","ALPHA RENTA FIJA SERIE 4","Valuacion","INGRESO","FCI",35.2471,16908.07,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-04-30","Compra Cedear SPY","PPI","CEDEAR","SPY","Compra / Suscripcion","INGRESO","CEDEAR",26,724.1,"","","SI"],["2025-04-30","Gastos por Compra Cedear SPY","PPI","CEDEAR","SPY","Gastos","SALIDA","USD",null,5.95,"","Comisiones y gastos de inversión","SI"],["2025-04-30","Compra Cedear SPY","PPI","CEDEAR","SPY","Compra / Suscripcion","SALIDA","USD",null,579.62,"","","SI"],["2025-04-30","Compra Cedear SPY","PPI","CEDEAR","SPY","Compra / Suscripcion","SALIDA","USD CCL",null,144.48,"","","SI"],["2025-05-07","Cobro honorarios Egali","ICBC","USD","","Cobro Honorarios","INGRESO","USD",null,1400,"Egali","","SI"],["2025-05-07","Cobro Hon. Egali (Trasnfer a Ari Grucki, me cobra el 6% en pesos)","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,2500,"Egali","","SI"],["2025-05-12","Cobro honorarios Egali","ICBC","USD","","Cobro Honorarios","INGRESO","USD",null,600,"Egali","","SI"],["2025-05-23","Cobro honorarios Tebyon cta cte","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,3000,"Tebyon","","SI"],["2025-05-31","Posición al 31/05/2025","ICBC","FCI","ALPHA ACCIONES B","Valuacion","INGRESO","FCI",8504.7488,13768.56,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-05-31","Posición al 31/05/2025","ICBC","FCI","ALPHA RENTA CAPITAL PESOS","Valuacion","INGRESO","FCI",137.6611,60002.85,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-05-31","Posición al 31/05/2025","ICBC","FCI","ALPHA PESOS PLUS","Valuacion","INGRESO","FCI",196.4553,19276.03,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-05-31","Posición al 31/05/2025","ICBC","FCI","ALPHA MERCOSUR B","Valuacion","INGRESO","FCI",0.1111,105.96,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-05-31","Posición al 31/05/2025","ICBC","FCI","ALPHA RENTA CAPITAL B","Valuacion","INGRESO","FCI",0.0105,12.33,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-05-31","Posición al 31/05/2025","ICBC","FCI","ALPHA PLAN CONSERVADOR","Valuacion","INGRESO","FCI",38.4696,26017.02,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-05-31","Posición al 31/05/2025","ICBC","FCI","ALPHA RETORNO TOTAL B","Valuacion","INGRESO","FCI",17.69,31131.79,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-05-31","Posición al 31/05/2025","ICBC","FCI","ALPHA RENTA FIJA SERIE 4","Valuacion","INGRESO","FCI",35.2471,13825.75,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-06-10","Cobro Hon. Egali (Trasnfer a Ari Grucki, me cobra el 6% en pesos)","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,800,"Egali","","SI"],["2025-06-17","Entregado a Cori por compra de Wisky en Free Shoop","CAJA CASA","USD","","Gastos","SALIDA","USD",null,125,"","Gastos personales","SI"],["2025-06-18","Cobro Honorarios Tema Consulting Mayo 2025","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,2500,"Tema Consulting","","SI"],["2025-06-26","Aparatos fijos Franco ","CAJA CASA","USD","","Gastos","SALIDA","USD",null,300,"","Gastos personales","SI"],["2025-06-30","Posición al 30/06/2025","ICBC","FCI","ALPHA ACCIONES B","Valuacion","INGRESO","FCI",8504.7488,-29635.1,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-06-30","Posición al 30/06/2025","ICBC","FCI","ALPHA RENTA CAPITAL PESOS","Valuacion","INGRESO","FCI",137.6611,-6105.3,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-06-30","Posición al 30/06/2025","ICBC","FCI","ALPHA PESOS PLUS","Valuacion","INGRESO","FCI",196.4553,21757.69,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-06-30","Posición al 30/06/2025","ICBC","FCI","ALPHA MERCOSUR B","Valuacion","INGRESO","FCI",0.1111,-234.87,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-06-30","Posición al 30/06/2025","ICBC","FCI","ALPHA RENTA CAPITAL B","Valuacion","INGRESO","FCI",0.0105,6.19,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-06-30","Posición al 30/06/2025","ICBC","FCI","ALPHA PLAN CONSERVADOR","Valuacion","INGRESO","FCI",38.4696,1309.66,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-06-30","Posición al 30/06/2025","ICBC","FCI","ALPHA RETORNO TOTAL B","Valuacion","INGRESO","FCI",17.69,-18725.58,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-06-30","Posición al 30/06/2025","ICBC","FCI","ALPHA RENTA FIJA SERIE 4","Valuacion","INGRESO","FCI",35.2471,5616.11,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-07-07","Cobro Hon. Egali Fc. 191","ICBC","USD","","Cobro Honorarios","INGRESO","USD",null,2000,"Egali","","SI"],["2025-07-07","Cobro Hon. Egali Fc. Ari Grucki (Me lo dio el 25/07)","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,1100,"Egali","","SI"],["2025-07-10","Renta GD35 - 2,0625 %","PPI","BONOS","GD35","Cupones","INGRESO","USD CCL",null,641.14,"","","SI"],["2025-07-10","Gastos por Renta GD35","PPI","$","","Gastos","SALIDA","PESOS",null,6041.14,"","Comisiones y gastos de inversión","SI"],["2025-07-16","Entregado a Daniel T. Cuota 2025 por cissab","CAJA CASA","USD","","Gastos","SALIDA","USD",null,1000,"","Gastos personales","SI"],["2025-07-17","Cobro Honorarios Tema Consulting Junio 2025","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,2500,"Tema Consulting","","SI"],["2025-07-31","Posición al 31/07/2025","ICBC","FCI","ALPHA ACCIONES B","Valuacion","INGRESO","FCI",8504.7488,27579.98,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-07-31","Posición al 31/07/2025","ICBC","FCI","ALPHA RENTA CAPITAL PESOS","Valuacion","INGRESO","FCI",137.6611,2385.91,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-07-31","Posición al 31/07/2025","ICBC","FCI","ALPHA PESOS PLUS","Valuacion","INGRESO","FCI",196.4553,27186.65,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-07-31","Posición al 31/07/2025","ICBC","FCI","ALPHA MERCOSUR B","Valuacion","INGRESO","FCI",0.1111,282.95,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-07-31","Posición al 31/07/2025","ICBC","FCI","ALPHA RENTA CAPITAL B","Valuacion","INGRESO","FCI",0.0105,22.78,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-07-31","Posición al 31/07/2025","ICBC","FCI","ALPHA PLAN CONSERVADOR","Valuacion","INGRESO","FCI",38.4696,10608.13,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-07-31","Posición al 31/07/2025","ICBC","FCI","ALPHA RETORNO TOTAL B","Valuacion","INGRESO","FCI",17.69,30376.46,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-07-31","Posición al 31/07/2025","ICBC","FCI","ALPHA RENTA FIJA SERIE 4","Valuacion","INGRESO","FCI",35.2471,7198.68,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-08-01","Dividendos SPY","PPI","CEDEAR","SPY","Dividendos","INGRESO","USD CCL",null,5.11,"","","SI"],["2025-08-04","Le di usd 20 a cada uno de los chicos","CAJA CASA","USD","","Gastos","SALIDA","USD",null,40,"","Gastos personales","SI"],["2025-08-11","Cobro Hon. Egali Fc. Ari Grucki (Me lo dio el 07/09)","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,1500,"Egali","","SI"],["2025-08-11","Cobro Hon. Egali Fc. 194","ICBC","USD","","Cobro Honorarios","INGRESO","USD",null,2500,"Egali","","SI"],["2025-08-20","Seña Murillo entregado a Victor","CAJA CASA","USD","","Murillo","SALIDA","USD",null,2000,"","Murillo","SI"],["2025-08-26","Cobro Hon. Egali - trasnfer a Tiago en Brasil - Entrega a Gasti y Javi Ch me lo dio a mi","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,2000,"Egali","","SI"],["2025-08-31","Posición al 31/08/2025","ICBC","FCI","ALPHA ACCIONES B","Valuacion","INGRESO","FCI",8504.7488,-30021.34,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-08-31","Posición al 31/08/2025","ICBC","FCI","ALPHA RENTA CAPITAL PESOS","Valuacion","INGRESO","FCI",137.6611,-14063.79,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-08-31","Posición al 31/08/2025","ICBC","FCI","ALPHA PESOS PLUS","Valuacion","INGRESO","FCI",196.4553,33347.49,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-08-31","Posición al 31/08/2025","ICBC","FCI","ALPHA MERCOSUR B","Valuacion","INGRESO","FCI",0.1111,-239,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-08-31","Posición al 31/08/2025","ICBC","FCI","ALPHA RENTA CAPITAL B","Valuacion","INGRESO","FCI",0.0105,-6.8,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-08-31","Posición al 31/08/2025","ICBC","FCI","ALPHA PLAN CONSERVADOR","Valuacion","INGRESO","FCI",38.4696,-301.92,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-08-31","Posición al 31/08/2025","ICBC","FCI","ALPHA RETORNO TOTAL B","Valuacion","INGRESO","FCI",17.69,-9424.86,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-08-31","Posición al 31/08/2025","ICBC","FCI","ALPHA RENTA FIJA SERIE 4","Valuacion","INGRESO","FCI",35.2471,9982.61,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-09-03","Cobro Honorarios Tema Consulting 2025-07 y 08","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,5000,"Tema Consulting","","SI"],["2025-09-08","Cobro Hon. Egali Fc. Ari Grucki (Me lo dio el 28/09) Fc 357","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,1200,"Egali","","SI"],["2025-09-08","Cobro Hon. Egali Fc. 196","ICBC","USD","","Cobro Honorarios","INGRESO","USD",null,1500,"Egali","","SI"],["2025-09-10","Daniel T me trajo de la caja fuerte del Galicia","CAJA DANIEL T","USD","","Movimiento de Caja","SALIDA","USD",null,20000,"","","SI"],["2025-09-10","Daniel T me trajo de la caja fuerte del Galicia","CAJA CASA","USD","","Movimiento de Caja","INGRESO","USD",null,20000,"","","SI"],["2025-09-10","Entregado a Brian","CAJA CASA","USD","","Movimiento de Caja","SALIDA","USD",null,30000,"","","SI"],["2025-09-10","Entregado a Brian","CAJA BRIAN","USD","","Movimiento de Caja","INGRESO","USD",null,30000,"","","SI"],["2025-09-10","Rescate FCI","ICBC","FCI","ALPHA ACCIONES B","Venta / Rescate","SALIDA","FCI",8473.58,181449.652375,"","","SI"],["2025-09-10","Rescate FCI","ICBC","FCI","ALPHA RENTA CAPITAL PESOS","Venta / Rescate","SALIDA","FCI",137.1191,1213109.309973,"","","SI"],["2025-09-10","Rescate FCI","ICBC","FCI","ALPHA PESOS PLUS","Venta / Rescate","SALIDA","FCI",196.0732,1169999.890041,"","","SI"],["2025-09-10","Rescate FCI","ICBC","FCI","ALPHA PLAN CONSERVADOR","Venta / Rescate","SALIDA","FCI",38.2412,617814.709993,"","","SI"],["2025-09-10","Rescate FCI","ICBC","FCI","ALPHA RENTA FIJA SERIE 4","Venta / Rescate","SALIDA","FCI",35.1548,495011.680016,"","","SI"],["2025-09-10","Ingreso de $ por rescate FCI ICBC + saldo inicio para compensar pago de gastos por $ 4M","ICBC","$","","Ingresos x Venta de instrumento o USD","INGRESO","PESOS",null,4000000,"","Cambio de moneda","SI"],["2025-09-11","Cobro honorarios Tebyon cta cte","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,5000,"Tebyon","","SI"],["2025-09-11","Pagos parcial Gastos boleto compra Murillo (Transfer al escribano Pepe)","ICBC","$","","Murillo","SALIDA","PESOS",null,4000000,"","Murillo","SI"],["2025-09-12","Venta de USD para gastos boleto murillo USD 6040,16 @ 1,424,63","ICBC","USD","","Venta / Rescate","SALIDA","USD",null,6040.16,"","Cambio de moneda","SI"],["2025-09-12","Ingreso de $ por venta USD 6.040,16 @ 1.424,63","ICBC","$","","Ingresos x Venta de instrumento o USD","INGRESO","PESOS",null,8604993.14,"","Cambio de moneda","SI"],["2025-09-12","Pagos parcial Gastos boleto compra Murillo (Transfer al escribano Pepe)","ICBC","$","","Murillo","SALIDA","PESOS",null,8000000,"","Murillo","SI"],["2025-09-12","Intereses ON YPF","PPI","Ons","YMCXD","Cupones","INGRESO","USD CCL",null,40.86,"","","SI"],["2025-09-12","Gastos por cobranza Intereses ON YPF","PPI","$","","Gastos","SALIDA","PESOS",null,616.23,"","Comisiones y gastos de inversión","SI"],["2025-09-15","Pago compra Murillo","CAJA CASA","USD","","Murillo","SALIDA","USD",null,47000,"","Murillo","SI"],["2025-09-22","Rescate FCI","ICBC","FCI","ALPHA RETORNO TOTAL B","Venta / Rescate","SALIDA","FCI",17.5262,633183.98,"","","SI"],["2025-09-26","Venta de USD 1.006,80 @  MEP ICBC","ICBC","USD","","Gastos","SALIDA","USD",null,1006.8,"","Gastos en pesos (venta de USD)","SI"],["2025-09-26","Retiro ICBC para caja casa","ICBC","USD","","Movimiento de Caja","SALIDA","USD",null,5000,"","","SI"],["2025-09-26","Retiro ICBC para caja casa","CAJA CASA","USD","","Movimiento de Caja","INGRESO","USD",null,5000,"","","SI"],["2025-09-28","Honorarios Juan Strauss","CAJA CASA","USD","","Murillo","SALIDA","USD",null,700,"","Murillo","SI"],["2025-09-29","Venta CCL a pesos y al icbc @ 1457,75","PPI","USD CCL","","Venta / Rescate","SALIDA","USD CCL",null,1298.87,"","","SI"],["2025-09-30","Intereses ON YPF","PPI","Ons","YMCJD","Cupones","INGRESO","USD CCL",null,37.27,"","","SI"],["2025-09-30","Gastos Intereses ON YPF","PPI","$","","Gastos","SALIDA","PESOS",null,540.04,"","Comisiones y gastos de inversión","SI"],["2025-09-30","Posición al 30/09/2025","ICBC","FCI","ALPHA ACCIONES B","Valuacion","INGRESO","FCI",31.17,-14922.15,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-09-30","Posición al 30/09/2025","ICBC","FCI","ALPHA RENTA CAPITAL PESOS","Valuacion","INGRESO","FCI",0.542,-10123.89,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-09-30","Posición al 30/09/2025","ICBC","FCI","ALPHA PESOS PLUS","Valuacion","INGRESO","FCI",0.3821,10605.51,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-09-30","Posición al 30/09/2025","ICBC","FCI","ALPHA MERCOSUR B","Valuacion","INGRESO","FCI",0.1111,-104.62,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-09-30","Posición al 30/09/2025","ICBC","FCI","ALPHA RENTA CAPITAL B","Valuacion","INGRESO","FCI",0.0105,-1.95,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-09-30","Posición al 30/09/2025","ICBC","FCI","ALPHA PLAN CONSERVADOR","Valuacion","INGRESO","FCI",0.2284,2237.01,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-09-30","Posición al 30/09/2025","ICBC","FCI","ALPHA RETORNO TOTAL B","Valuacion","INGRESO","FCI",0.1638,-25691.68,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-09-30","Posición al 30/09/2025","ICBC","FCI","ALPHA RENTA FIJA SERIE 4","Valuacion","INGRESO","FCI",0.0923,5591.2,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-10-03","Pago Persianas","CAJA CASA","USD","","Murillo","SALIDA","USD",null,4750,"","Murillo","SI"],["2025-10-08","Transfer de ICBC a PPI en USD","ICBC","USD","","Movimiento de Caja","SALIDA","USD",null,3500,"","","SI"],["2025-10-08","Transfer de ICBC a PPI en USD","PPI","USD","","Movimiento de Caja","INGRESO","USD",null,3500,"","","SI"],["2025-10-09","Venta de USD 1.989,50 @ 1.474,64 MEP PPI","PPI","USD","","Gastos","SALIDA","USD",null,1989.18,"","Gastos en pesos (venta de USD)","SI"],["2025-10-09","Pase de CCL a MEP","PPI","USD CCL","","Movimiento de Caja","SALIDA","USD CCL",null,37.27,"","","SI"],["2025-10-09","Pase de CCL a MEP","PPI","USD","","Movimiento de Caja","INGRESO","USD",null,37.59,"","","SI"],["2025-10-09","Ajuste Saldo USD CCL","PPI","USD CCL","","Movimiento de Caja","SALIDA","USD CCL",null,0.3,"","","SI"],["2025-10-10","Cobro Hon. Egali Fc. Ari Grucki (Me lo dio el 19/10) Fc 359","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,1200,"Egali","","SI"],["2025-10-14","Cobro por comodato por entrega Corrientes","CAJA DANIEL T","USD","","Murillo","INGRESO","USD",null,10000,"","Murillo","SI"],["2025-10-14","Dejo en la casa de Dani","CAJA DANIEL T","USD","","Movimiento de Caja","INGRESO","USD",null,6809,"","","SI"],["2025-10-14","Dejo en la casa de Dani","CAJA CASA","USD","","Movimiento de Caja","SALIDA","USD",null,6809,"","","SI"],["2025-10-15","Cobro Honorarios Tema Sep 25","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,2500,"Tema Consulting","","SI"],["2025-10-20","Cobro Hon. Egali Fc. 198","ICBC","USD","","Cobro Honorarios","INGRESO","USD",null,2000,"Egali","","SI"],["2025-10-20","Venta de USD 1.007,79 @ 1.509,30  MEP ","ICBC","USD","","Gastos","SALIDA","USD",null,1007.79,"","Gastos en pesos (venta de USD)","SI"],["2025-10-22","Venta de USD 1.408,72 @ 1.568,86  MEP ","ICBC","USD","","Gastos","SALIDA","USD",null,1408.72,"","Gastos en pesos (venta de USD)","SI"],["2025-10-30","Venta de USD 200,88 @ 1.448,44  MEP ","ICBC","USD","","Gastos","SALIDA","USD",null,200.88,"","Gastos en pesos (venta de USD)","SI"],["2025-10-31","Posición al 31/10/2025","ICBC","FCI","ALPHA ACCIONES B","Valuacion","INGRESO","FCI",31.17,427.47,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-10-31","Posición al 31/10/2025","ICBC","FCI","ALPHA RENTA CAPITAL PESOS","Valuacion","INGRESO","FCI",0.542,1157.22,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-10-31","Posición al 31/10/2025","ICBC","FCI","ALPHA PESOS PLUS","Valuacion","INGRESO","FCI",0.3821,73.5,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-10-31","Posición al 31/10/2025","ICBC","FCI","ALPHA MERCOSUR B","Valuacion","INGRESO","FCI",0.1111,1151.69,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-10-31","Posición al 31/10/2025","ICBC","FCI","ALPHA RENTA CAPITAL B","Valuacion","INGRESO","FCI",0.0105,59.74,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-10-31","Posición al 31/10/2025","ICBC","FCI","ALPHA PLAN CONSERVADOR","Valuacion","INGRESO","FCI",0.2284,584.21,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-10-31","Posición al 31/10/2025","ICBC","FCI","ALPHA RETORNO TOTAL B","Valuacion","INGRESO","FCI",0.1638,1163.79,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-10-31","Posición al 31/10/2025","ICBC","FCI","ALPHA RENTA FIJA SERIE 4","Valuacion","INGRESO","FCI",0.0923,95.1,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-11-03","Cobro dividendos SPY","PPI","CEDEAR","SPY","Dividendos","INGRESO","USD CCL",null,5.31,"","","SI"],["2025-11-03","Gastos Cobro dividendos SPY","PPI","$","","Gastos","SALIDA","PESOS",null,471.92,"","Comisiones y gastos de inversión","SI"],["2025-11-07","Cobro Hon. Egali Fc. Ari Grucki (Me lo dio el 23/11) Fc 362","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,1200,"Egali","","SI"],["2025-11-07","Le transferí a Moya y me dio efectivo","ICBC","USD","","Movimiento de Caja","SALIDA","USD",null,400,"","","SI"],["2025-11-07","Le transferí a Moya y me dio efectivo","CAJA CASA","USD","","Movimiento de Caja","INGRESO","USD",null,400,"","","SI"],["2025-11-07","Venta de USD 491,88 @ 1.448,10 MEP PPI","PPI","USD","","Gastos","SALIDA","USD",null,497.19,"","Gastos en pesos (venta de USD)","SI"],["2025-11-07","Venta de USD 5,31 @ 1.448,10 CCL PPI","PPI","USD CCL","","Gastos","SALIDA","USD CCL",null,5.31,"","Gastos en pesos (venta de USD)","SI"],["2025-11-12","Cobro Honorarios Tema Oct 25","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,2500,"Tema Consulting","","SI"],["2025-11-14","Venta de USD 248,50 @ 1.435,15 MEP PPI","PPI","USD","","Gastos","SALIDA","USD",null,248.5,"","Gastos en pesos (venta de USD)","SI"],["2025-11-19","Venta de USD 248,44 @ 1.420,73 MEP PPI","PPI","USD","","Gastos","SALIDA","USD",null,248.44,"","Gastos en pesos (venta de USD)","SI"],["2025-11-19","Ajuste de saldos","PPI","USD","","Gastos","INGRESO","USD",null,4.93,"","Comisiones y gastos de inversión","SI"],["2025-11-19","Ajuste de saldos","PPI","$","","Gastos","SALIDA","PESOS",null,2315.38,"","Comisiones y gastos de inversión","SI"],["2025-11-28","Ajuste para dejar en cero los pesos del icbc","ICBC","$","","Ajuste","SALIDA","PESOS",null,604993.14,"","","SI"],["2025-11-30","Posición al 30/11/2025","ICBC","FCI","ALPHA ACCIONES B","Valuacion","INGRESO","FCI",31.17,5.53,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-11-30","Posición al 30/11/2025","ICBC","FCI","ALPHA RENTA CAPITAL PESOS","Valuacion","INGRESO","FCI",0.542,178.18,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-11-30","Posición al 30/11/2025","ICBC","FCI","ALPHA PESOS PLUS","Valuacion","INGRESO","FCI",0.3821,45.13,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-11-30","Posición al 30/11/2025","ICBC","FCI","ALPHA MERCOSUR B","Valuacion","INGRESO","FCI",0.1111,16.22,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-11-30","Posición al 30/11/2025","ICBC","FCI","ALPHA RENTA CAPITAL B","Valuacion","INGRESO","FCI",0.0105,11.45,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-11-30","Posición al 30/11/2025","ICBC","FCI","ALPHA PLAN CONSERVADOR","Valuacion","INGRESO","FCI",0.2284,117.31,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-11-30","Posición al 30/11/2025","ICBC","FCI","ALPHA RETORNO TOTAL B","Valuacion","INGRESO","FCI",0.1638,193.35,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-11-30","Posición al 30/11/2025","ICBC","FCI","ALPHA RENTA FIJA SERIE 4","Valuacion","INGRESO","FCI",0.0923,36.25,"","Valuación histórica (el dashboard no la usa)","SI"],["2025-12-03","Le di usd 100 a cada uno de los chicos por terminar el cole","CAJA CASA","USD","","Gastos","SALIDA","USD",null,200,"","Gastos personales","SI"],["2025-12-10","Pagado a Paula para vacaciones Floripa","CAJA CASA","USD","","Gastos","SALIDA","USD",null,700,"","Gastos personales","SI"],["2025-12-11","Cobro Hon. Egali factura mia","ICBC","USD","","Cobro Honorarios","INGRESO","USD",null,2000,"Egali","","SI"],["2025-12-15","Retiré lo que tenia en la casa de Daniel","CAJA DANIEL T","USD","","Movimiento de Caja","SALIDA","USD",null,16809,"","","SI"],["2025-12-15","Retiré lo que tenia en la casa de Daniel","CAJA CASA","USD","","Movimiento de Caja","INGRESO","USD",null,16809,"","","SI"],["2025-12-16","Venta de USD 148,64 @ 1.473,60 MEP PPI","PPI","USD","","Gastos","SALIDA","USD",null,148.64,"","Gastos en pesos (venta de USD)","SI"],["2025-12-29","Venta de USD 198,89 @ 1.467,11 MEP PPI","PPI","USD","","Gastos","SALIDA","USD",null,198.89,"","Gastos en pesos (venta de USD)","SI"],["2026-01-05","Gastos FreeShop Arapey","ICBC","USD","","Gastos","SALIDA","USD",null,554.79,"","Gastos personales","SI"],["2026-01-05","Me devolvieron en efvo en Freeshop","CAJA CASA","USD","","Gastos","INGRESO","USD",null,20,"","Gastos personales","SI"],["2026-01-12","Renta GD35 - 2,0625 %","PPI","BONOS","GD35","Cupones","INGRESO","USD CCL",null,641.14,"","","SI"],["2026-01-20","Cobro Hon. Egali factura mia","ICBC","USD","","Cobro Honorarios","INGRESO","USD",null,3000,"Egali","","SI"],["2026-01-27","Cobro honorarios Tebyon cta cte","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,3240,"Tebyon","","SI"],["2026-01-27","Cobro Hon. Tema Consulting (Nov y Dic 25)","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,5000,"Tema Consulting","","SI"],["2026-01-27","Cobro Hon. Tema Consulting (Ene 26 - Parcial)","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,1760,"Tema Consulting","","SI"],["2026-02-03","Dividendos SPY","PPI","CEDEAR","SPY","Dividendos","INGRESO","USD CCL",null,5.79,"","","SI"],["2026-02-04","Traspaso de caja Brian a caja Casa","CAJA BRIAN","USD","","Movimiento de Caja","SALIDA","USD",null,30000,"","","SI"],["2026-02-04","Traspaso de caja Brian a caja Casa","CAJA CASA","USD","","Movimiento de Caja","INGRESO","USD",null,30000,"","","SI"],["2026-02-10","Pago a Paula que le debia del alojamiento en Brasil","CAJA CASA","USD","","Gastos","SALIDA","USD",null,70,"","Gastos personales","SI"],["2026-02-24","Cobro Hon. Egali (Facturado por Thiago en Brasil)","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,4900,"Egali","","SI"],["2026-02-26","Cobro Hon. Tema Consulting (Completa Ene 26) + Feb 26 + Parcial Marzo 26 ","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,7070,"Tema Consulting","","SI"],["2026-02-26","Aportado a Tebyon para pago de Tema Consulting","CAJA CASA","USD","","Cobro Honorarios","SALIDA","USD",null,70,"Tebyon","","SI"],["2026-03-12","Intereses ON YPF","PPI","Ons","YMCXD","Cupones","INGRESO","USD CCL",null,40.86,"","","SI"],["2026-03-30","Venta USD 200.00 @","ICBC","USD","","Gastos","SALIDA","USD",null,200,"","Gastos en pesos (venta de USD)","SI"],["2026-03-31","Intereses ON YPF","PPI","Ons","YMCJD","Cupones","INGRESO","USD CCL",null,37.27,"","","SI"],["2026-03-31","Paso de  CCL a MEP","PPI","USD CCL","","Movimiento de Caja","SALIDA","USD CCL",null,684.48,"","","SI"],["2026-03-31","Paso de  CCL a MEP","PPI","USD CCL","","Movimiento de Caja","INGRESO","USD",null,700,"","","SI"],["2026-04-01","Venta Vista","PPI","CEDEAR","VIST","Venta / Rescate","SALIDA","CEDEAR",100,1364.3,"","","SI"],["2026-04-01","Venta Vista","PPI","CEDEAR","VIST","Venta / Rescate","INGRESO","USD",100,2442.64,"","","SI"],["2026-04-01","Compra Cedear Microsoft","PPI","CEDEAR","MSFT","Compra / Suscripcion","INGRESO","CEDEAR",69,889.41,"","","SI"],["2026-04-01","Compra Cedear Microsoft","PPI","CEDEAR","MSFT","Compra / Suscripcion","SALIDA","USD",null,889.41,"","","SI"],["2026-04-01","Compra Cedear Microsoft","PPI","CEDEAR","MSFT","Gastos","SALIDA","USD",null,6.99,"","Comisiones y gastos de inversión","SI"],["2026-04-07","Cobro Honorarios Egali Fc. JL 208","ICBC","USD","","Cobro Honorarios","INGRESO","USD",null,3000,"Egali","","SI"],["2026-04-22","Venta USD 301.69 @ ","ICBC","USD","","Gastos","SALIDA","USD",null,301.69,"","Gastos en pesos (venta de USD)","SI"],["2026-04-24","Cobro Honorarios Egali Fc. JL 209","ICBC","USD","","Cobro Honorarios","INGRESO","USD",null,3000,"Egali","","SI"],["2026-04-27","Venta USD 201.05 @","ICBC","USD","","Gastos","SALIDA","USD",null,201.05,"","Gastos en pesos (venta de USD)","SI"],["2026-04-28","Completa pago por ciudadania Polaca","CAJA CASA","USD","","Gastos","SALIDA","USD",null,500,"","Gastos personales","SI"],["2026-04-30","Venta USD 100.65 @","ICBC","USD","","Gastos","SALIDA","USD",null,100.65,"","Gastos en pesos (venta de USD)","SI"],["2026-04-30","Dividendos SPY","PPI","CEDEAR","SPY","Dividendos","INGRESO","USD CCL",null,5.22,"","","SI"],["2026-05-13","Pagado para ciudadania Polonia chicos adelanto ","CAJA CASA","USD","","Gastos","SALIDA","USD",null,1000,"","Gastos personales","SI"],["2026-05-21","Venta USD 251.11 @ 1.411,17","ICBC","USD","","Gastos","SALIDA","USD",null,251.11,"","Gastos en pesos (venta de USD)","SI"],["2026-05-21","Cobro Honorarios Egali - Recibí deposito en Gtia Oficina","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,1400,"Egali","","SI"],["2026-05-29","Venta USD 100.57 @","ICBC","USD","","Gastos","SALIDA","USD",null,100.57,"","Gastos en pesos (venta de USD)","SI"],["2026-06-01","Split CEDEAR SPY 3:1 (ratio 20:1 → 60:1). 83 → 249","PPI","CEDEAR","SPY","Split","INGRESO","CEDEAR",166,0,"","","SI"],["2026-06-02","Bar Mitzva - Pago Figueroa 5500","CAJA CASA","USD","","Gastos","SALIDA","USD",null,3000,"","Gastos personales","SI"],["2026-06-02","Pago Gastos Visa ICBC cargos en USD","ICBC","USD","","Gastos","SALIDA","USD",null,2.98,"","Gastos personales","SI"],["2026-06-12","Dividendos MSFT","PPI","CEDEAR","MSFT","Dividendos","INGRESO","USD CCL",null,1.35,"","","SI"],["2026-06-19","Cobro honorarios Tebyon cta cte","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,4000,"Tebyon","","SI"],["2026-06-23","Venta USD 201.12 @","ICBC","USD","","Gastos","SALIDA","USD",null,201.12,"","Gastos en pesos (venta de USD)","SI"],["2026-06-26","Venta USD 100.29 @","ICBC","USD","","Gastos","SALIDA","USD",null,100.29,"","Gastos en pesos (venta de USD)","SI"],["2026-06-30","Venta USD 100.72 @","ICBC","USD","","Gastos","SALIDA","USD",null,100.72,"","Gastos en pesos (venta de USD)","SI"],["2026-07-01","Cobro Honorarios Egali Fc. JL 212","ICBC","USD","","Cobro Honorarios","INGRESO","USD",null,3000,"Egali","","SI"],["2026-07-08","Cobro honorarios Tema Consulting","CAJA CASA","USD","","Cobro Honorarios","INGRESO","USD",null,10000,"Tema Consulting","","SI"],["2026-07-10","Renta GD35 - 2,0625 %","PPI","BONOS","GD35","Cupones","INGRESO","USD CCL",null,641.14,"","","SI"],["2026-07-23","Compra Cedear Tesla","PPI","CEDEAR","TSLA","Compra / Suscripcion","SALIDA","USD",null,1991.82,"","","SI"],["2026-07-23","Compra Cedear Tesla","PPI","CEDEAR","TSLA","Compra / Suscripcion","INGRESO","CEDEAR",89,1991.82,"","","SI"],["2026-07-23","Compra Cedear Tesla","PPI","CEDEAR","TSLA","Gastos","SALIDA","USD",null,15.67,"","Comisiones y gastos de inversión","SI"],["2026-08-03","Transfer de ICBC a PPI en USD","ICBC","USD","","Movimiento de Caja","SALIDA","USD",null,6000,"","","SI"],["2026-08-03","Transfer de ICBC a PPI en USD","PPI","USD","","Movimiento de Caja","INGRESO","USD",null,6000,"","","SI"],["2026-08-03","Dividendos SPY","PPI","CEDEAR","SPY","Dividendos","INGRESO","USD CCL",null,5.52,"","","SI"],["2026-08-03","Compra Cedear SPY","PPI","CEDEAR","SPY","Compra / Suscripcion","SALIDA","USD",null,1981.12,"","","SI"],["2026-08-03","Compra Cedear SPY","PPI","CEDEAR","SPY","Compra / Suscripcion","INGRESO","CEDEAR",151,1981.12,"","","SI"],["2026-08-03","Compra Cedear SPY","PPI","CEDEAR","SPY","Gastos","SALIDA","USD",null,15.58,"","Comisiones y gastos de inversión","SI"],["2026-08-04","Compra Cedear Nvidia","PPI","CEDEAR","NVDA","Compra / Suscripcion","SALIDA","USD",null,990.36,"","","SI"],["2026-08-04","Compra Cedear Nvidia","PPI","CEDEAR","NVDA","Compra / Suscripcion","INGRESO","CEDEAR",108,990.36,"","","SI"],["2026-08-04","Compra Cedear Nvidia","PPI","CEDEAR","NVDA","Gastos","SALIDA","USD",null,7.79,"","Comisiones y gastos de inversión","SI"],["2026-08-04","Compra Cedear VEA","PPI","CEDEAR","VEA","Gastos","SALIDA","USD",null,7.79,"","Comisiones y gastos de inversión","SI"],["2026-08-04","Compra Cedear VEA","PPI","CEDEAR","VEA","Compra / Suscripcion","INGRESO","CEDEAR",132,990,"","","SI"],["2026-08-04","Compra Cedear VEA","PPI","CEDEAR","VEA","Compra / Suscripcion","SALIDA","USD",null,990,"","","SI"],["2026-08-04","Split YPFD 10:1. 33 → 330","PPI","ACCIONES","YPFD","Split","INGRESO","ACCIONES",297,0,"","","SI"],["2026-08-05","Cobro Honorarios Egali Fc. JL 215","ICBC","USD","","Cobro Honorarios","INGRESO","USD",null,3000,"Egali","","SI"],["2026-08-28","Venta USD 200.81 @","ICBC","USD","","Gastos","SALIDA","USD",null,200.81,"","Gastos en pesos (venta de USD)","SI"],["2026-09-02","Pago Gastos Visa ICBC cargos en USD","ICBC","USD","","Gastos","SALIDA","USD",null,22.98,"","Gastos personales","SI"],["2026-09-03","Cobro Honorarios Egali Fc. JL 219","ICBC","USD","","Cobro Honorarios","INGRESO","USD",null,4000,"Egali","","SI"],["2026-09-09","Pasaporte Polonia","CAJA CASA","USD","","Gastos","SALIDA","USD",null,165,"","Gastos personales","SI"],["2026-09-11","Cobro dividendos MSFT","PPI","CEDEAR","MSFT","Dividendos","INGRESO","USD CCL",null,1.35,"","","SI"],["2026-09-14","Cobro intereses YPF (YMCXD)","PPI","Ons","YMCXD","Cupones","INGRESO","USD CCL",null,40.86,"","","SI"],["2026-09-23","Cobro dividendos VEA","PPI","CEDEAR","VEA","Dividendos","INGRESO","USD CCL",null,1.5,"","","SI"],["2026-09-25","Gastos PPI no registrados (ajuste de conciliación con saldo en pesos de PPI)","PPI","$","","Gastos","SALIDA","PESOS",null,21748.72,"","Comisiones y gastos de inversión","SI"],["2026-09-25","Ajuste de redondeo saldo USD MEP PPI","PPI","USD","","Ajuste","SALIDA","USD",null,0.02,"","","SI"]];
+// Captura de PPI (Doc1111.docx, 25/09/2026). valor = valor corriente en USD según PPI para q unidades.
+// Precios y saldos de PPI: estado de cuenta del 30/09/2026 (valor corriente en pesos ÷ dólar bolsa AL30/AL30D que informa PPI).
+// Se reemplazan al cargar un estado de cuenta nuevo con el botón "Cargar estado de cuenta PPI".
+const EMBEDDED_PRICES = {"date": "2026-09-30", "mep": 1549.36, "ppiTotal": 47769.23, "source": "Estado de cuenta PPI", "saldos": {"PESOS": -17101.78, "USD CCL": 737.52, "USD": 2457.83}, "items": {"YPFD": {"q": 330, "valorArs": 2676300, "px": "$ 8.110,00", "valor": 1727.36}, "GD35": {"q": 31086, "valorArs": 35957176.2, "px": "$ 1.156,70", "valor": 23207.76}, "BRKB": {"q": 86, "valorArs": 3175120, "px": "$ 36.920,00", "valor": 2049.31}, "MSFT": {"q": 69, "valorArs": 1891980, "px": "$ 27.420,00", "valor": 1221.14}, "NVDA": {"q": 108, "valorArs": 1654560, "px": "$ 15.320,00", "valor": 1067.9}, "SPY": {"q": 400, "valorArs": 8240000, "px": "$ 20.600,00", "valor": 5318.32}, "TSLA": {"q": 180, "valorArs": 6840000, "px": "$ 38.000,00", "valor": 4414.73}, "VEA": {"q": 132, "valorArs": 1520640, "px": "$ 11.520,00", "valor": 981.46}, "VIST": {"q": 45, "valorArs": 1619100, "px": "$ 35.980,00", "valor": 1045.01}, "ALL.ES.A": {"q": 1233466.81, "valorArs": 2283085.39, "px": "$ 1,851", "valor": 1473.57}, "YMCJD": {"q": 1065, "valorArs": 1666566.72, "px": "US$ 1,01", "valor": 1075.65}, "YMCXD": {"q": 934, "valorArs": 1553462.02, "px": "US$ 1,07", "valor": 1002.65}}};
+let PRICES = EMBEDDED_PRICES;
+// Cierres de año de PPI (estados de cuenta al 31/12/2023, 2024 y 2025)
+const EMBEDDED_HIST = {"2023-12-31": {"items": {"GD35": {"q": 31086, "valor": 11045.38, "valorArs": 11035219.14, "px": "$ 354,99"}}, "saldos": {"PESOS": 0.41, "USD CCL": 0, "USD": 0}, "date": "2023-12-31", "mep": 999.08, "ppiTotal": 11045.43, "source": "Estado de cuenta PPI"}, "2024-12-31": {"items": {"GD35": {"q": 31086, "valor": 21726.02, "valorArs": 25428348, "px": "$ 818,00"}, "YMCJD": {"q": 1065, "valor": 1090.03, "valorArs": 1275779.9, "px": "US$ 1,02"}}, "saldos": {"PESOS": 4972.99, "USD CCL": 37.29, "USD": 0}, "date": "2024-12-31", "mep": 1170.41, "ppiTotal": 22857.57, "source": "Estado de cuenta PPI"}, "2025-12-31": {"items": {"YPFD": {"q": 33, "valor": 1216.82, "valorArs": 1801800, "px": "$ 54.600,00"}, "GD35": {"q": 31086, "valor": 24539.37, "valorArs": 36336425.4, "px": "$ 1.168,90"}, "BRKB": {"q": 86, "valor": 2025.8, "valorArs": 2999680, "px": "$ 34.880,00"}, "SPY": {"q": 83, "valor": 2928.77, "valorArs": 4336750, "px": "$ 52.250,00"}, "TSLA": {"q": 91, "valor": 2845.4, "valorArs": 4213300, "px": "$ 46.300,00"}, "VIST": {"q": 145, "valor": 2395.22, "valorArs": 3546700, "px": "$ 24.460,00"}, "ALL.ES.A": {"q": 1233466.81, "valor": 1222.55, "valorArs": 1810272.9, "px": "$ 1,468"}, "YMCJD": {"q": 1065, "valor": 1101.74, "valorArs": 1631394.94, "px": "US$ 1,03"}, "YMCXD": {"q": 934, "valor": 1019.93, "valorArs": 1510248.88, "px": "US$ 1,09"}}, "saldos": {"PESOS": 476.95, "USD CCL": 0, "USD": 211.74}, "date": "2025-12-31", "mep": 1480.74, "ppiTotal": 39507.65, "source": "Estado de cuenta PPI"}};
+Object.values(EMBEDDED_HIST).forEach(h => {}); // (MEP de cierres se agrega al iniciar)
+// Cierres 2021 y 2022 sin estado de cuenta (los bonos estaban en otra cuenta): valuados con el precio de mercado del GD35
+// en dólares MEP (GD35D) al último día hábil del año, fuente data912.com: 30/12/2021 US$ 34,50 y 30/12/2022 US$ 27,40 cada 100 VN.
+const MARKET_CLOSES = {
+  '2021-12-31': {date:'2021-12-31', source:'Precio de mercado GD35D (30/12/2021)', items:{GD35:{q:31086, valor:31086*34.50/100}}},
+  '2022-12-31': {date:'2022-12-31', source:'Precio de mercado GD35D (30/12/2022)', items:{GD35:{q:31086, valor:31086*27.40/100}}}
+};
+let HIST = Object.assign({}, MARKET_CLOSES, EMBEDDED_HIST, {[EMBEDDED_PRICES.date]: EMBEDDED_PRICES}); // estados de cuenta cargados, por fecha
+// Cronogramas de pago por cada 100 nominales (condiciones de emisión). [fecha, renta, amortización]
+// Arma un cronograma por cada 100 nominales: renta sobre el capital que queda, amortizaciones en las fechas indicadas.
+function makeSched(first, last, rate, months, amorts){
+  const out = []; let left = 100; const d = new Date(first + 'T00:00:00Z'); const end = Date.parse(last);
+  while (d.getTime() <= end) {
+    const f = d.toISOString().slice(0,10), am = amorts[f] || 0;
+    out.push([f, +(left*rate/100*months/12).toFixed(4), am]); left -= am;
+    d.setUTCMonth(d.getUTCMonth() + months);
+  }
+  return out;
+}
+const SCHEDULES = {
+  GD35: [['2027-01-09',2.0625,0],['2027-07-09',2.0625,0],['2028-01-09',2.375,0],['2028-07-09',2.375,0],['2029-01-09',2.5,0],['2029-07-09',2.5,0],
+         ['2030-01-09',2.5,0],['2030-07-09',2.5,0],['2031-01-09',2.5,10],['2031-07-09',2.25,10],['2032-01-09',2.0,10],['2032-07-09',1.75,10],
+         ['2033-01-09',1.5,10],['2033-07-09',1.25,10],['2034-01-09',1.0,10],['2034-07-09',0.75,10],['2035-01-09',0.5,10],['2035-07-09',0.25,10]],
+  YMCJD: [['2026-09-30',3.5,0],['2027-03-30',3.5,0],['2027-09-30',3.5,0],['2028-03-30',3.5,0],['2028-09-30',3.5,0],['2029-03-30',3.5,0],
+          ['2029-09-30',3.5,0],['2030-03-30',3.5,0],['2030-09-30',3.5,25],['2031-03-30',2.625,0],['2031-09-30',2.625,25],['2032-03-30',1.75,0],
+          ['2032-09-30',1.75,25],['2033-03-30',0.875,0],['2033-09-30',0.875,25]],
+  YMCXD: [['2027-03-11',4.375,0],['2027-09-11',4.375,0],['2028-03-11',4.375,0],['2028-09-11',4.375,0],['2029-03-11',4.375,0],['2029-09-11',4.375,20],
+          ['2030-03-11',3.5,0],['2030-09-11',3.5,20],['2031-03-11',2.625,0],['2031-09-11',2.625,60]],
+  // ON Vista Energy Clase XXIX: 8,5% anual, cupones 10/06 y 10/12 desde 10/12/2025; amortiza 33% (2031), 33% (2032) y 34% (2033)
+  VSCVD: makeSched('2025-12-10', '2033-06-10', 8.5, 6, {'2031-06-10':33, '2032-06-10':33, '2033-06-10':34})
+};
+// La misma especie cotiza en pesos (O), MEP (D) y cable (C): se busca el cronograma por cualquiera de los tres.
+const schedOf = s => SCHEDULES[s] || SCHEDULES[s.replace(/[OC]$/, 'D')] || null;
+// Dólar MEP histórico estimado: cotizaciones de tus propias operaciones (descripciones de la base)
+// y MEP implícito en las compras de ON. Entre puntos se interpola.
+let MEP_POINTS = [
+  ['2024-09-10',1243.8],['2025-01-10',1170.1],['2025-03-10',1213.65],['2025-04-03',1319.42],['2025-09-12',1424.63],
+  ['2025-10-09',1474.64],['2025-10-20',1509.30],['2025-10-22',1568.86],['2025-10-30',1448.44],['2025-11-07',1448.10],
+  ['2025-11-14',1435.15],['2025-11-19',1420.73],['2025-12-16',1473.60],['2025-12-29',1467.11],['2026-05-21',1411.17],
+  ['2026-09-25',1550.10],['2026-09-28',1552.50],['2026-09-30',1549.36]
+].map(([d,v])=>[Date.parse(d),v]);
+function addMepPoint(date, v){ if (!v) return; const t = Date.parse(date); MEP_POINTS = MEP_POINTS.filter(p => p[0] !== t).concat([[t, v]]).sort((a,b)=>a[0]-b[0]); }
+const INFO = {
+  'YPFD':{name:'YPF',geo:'AR'}, 'GD35':{name:'Bono Global 2035',geo:'AR'}, 'YMCJD':{name:'ON YPF 7% 2033',geo:'AR'}, 'YMCXD':{name:'ON YPF 8,75% 2031',geo:'AR'},
+  'ALL.ES.A':{name:'Allaria CEDEARs Brasil',geo:'EXT'}, 'KO':{name:'Coca Cola',geo:'EXT'}, 'MELI':{name:'Mercado Libre',geo:'EXT'},
+  'BRKB':{name:'Berkshire Hathaway',geo:'EXT'}, 'MSFT':{name:'Microsoft',geo:'EXT'}, 'NVDA':{name:'Nvidia',geo:'EXT'}, 'SPY':{name:'S&P 500',geo:'EXT'},
+  'TSLA':{name:'Tesla',geo:'EXT'}, 'VEA':{name:'Vanguard Desarrollados',geo:'EXT'}, 'VIST':{name:'Vista Energy',geo:'AR'}, 'VSCVD':{name:'ON Vista 8,5% 2033',geo:'AR'}
+};
+const CLASS_NAME = {BONOS:'Bonos', Ons:'Obligaciones negociables', CEDEAR:'CEDEARs', ACCIONES:'Acciones', FCI:'Fondos (FCI)'};
+const CLASS_COLOR = {BONOS:'--s1', CEDEAR:'--s2', Ons:'--s4', ACCIONES:'--s5', FCI:'--s6'};
+const FIJA = new Set(['BONOS','Ons']);
+// Fondos viejos que el dashboard deja afuera del análisis de inversiones (sus movimientos siguen en la base y en los saldos de caja).
+const EXCLUDE_UNTIL = Date.parse('2025-12-31');
+const EXCLUIDOS = (s, t) => t <= EXCLUDE_UNTIL && (/^ALPHA /i.test(s) || s === 'NOV.LIQ.A');
+const INSTR = new Set(['FCI','CEDEAR','Ons','BONOS','ACCIONES']);
+const CASH = new Set(['USD','USD CCL','PESOS']);
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const CLIENT_COLORS = ['--s1','--s2','--s3','--s4','--s5','--s6'];
+const RENTA_COLORS = {Cupones:'--s1', Dividendos:'--s2', Intereses:'--s3'};
+const DAY = 86400000;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+// ══ ESTADO ══
+let ROWS = [], CUR = 'USD';
+let monthCols = [];
+let M = null;
+const charts = {};
+let cartSort = {key:'value', dir:-1};
+let movSort = {key:'t', dir:-1};
+
+function toRow(a, k){ return {n:k, f:a[0], t:Date.parse(a[0]), d:a[1]||'', b:a[2]||'', i:a[3]||'', s:a[4]||'', m:a[5]||'', op:a[6]||'', mon:a[7]||'', q:(typeof a[8]==='number')?a[8]:null, amt:(typeof a[9]==='number')?a[9]:0, cli:a[10]||'', cat:a[11]||'', af:(a[12]||'SI').toString().toUpperCase()}; }
+function mep(t){
+  const P = MEP_POINTS;
+  if (t <= P[0][0]) return P[0][1];
+  if (t >= P[P.length-1][0]) return P[P.length-1][1];
+  for (let k=1;k<P.length;k++) if (t <= P[k][0]) { const [t0,v0]=P[k-1],[t1,v1]=P[k]; return v0 + (v1-v0)*(t-t0)/(t1-t0); }
+  return P[P.length-1][1];
+}
+const sgn = r => r.op === 'INGRESO' ? 1 : -1;
+const usdOf = r => (r.mon === 'PESOS' || r.mon === 'FCI') ? r.amt / mep(r.t) : r.amt;
+let PRICE_T = Date.parse(PRICES.date);
+const cv = (usd, t) => CUR === 'ARS' ? usd * (t ? mep(t) : PRICES.mep) : usd;
+
+// ══ FORMATO ══
+const nf0 = new Intl.NumberFormat('es-AR',{maximumFractionDigits:0});
+const nf2 = new Intl.NumberFormat('es-AR',{minimumFractionDigits:2, maximumFractionDigits:2});
+const sym = () => CUR === 'ARS' ? '$' : 'US$';
+function money(v, opts={}){
+  if (v == null || !isFinite(v)) return '—';
+  const a = Math.abs(v); const s = (a < 100 && a >= 0.005 && !opts.int) ? nf2.format(a) : nf0.format(a);
+  return (v < -0.004 ? '−' : (opts.plus && v > 0.004 ? '+' : '')) + sym() + ' ' + s;
+}
+function short(v){
+  const a=Math.abs(v), s=v<0?'−':'';
+  if (a>=1e6) return s+sym()+' '+nf2.format(a/1e6).replace(/,00$/,'')+' M';
+  if (a>=1e3) return s+sym()+' '+nf0.format(a/1e3)+' k';
+  return s+sym()+' '+nf0.format(a);
+}
+const pct = (v, plus=true) => (v == null || !isFinite(v)) ? '—' : ((v>0&&plus)?'+':'') + nf2.format(v*100).replace('-','−') + '%';
+const pct0 = v => nf0.format(v*100) + '%';
+const qty = v => new Intl.NumberFormat('es-AR',{maximumFractionDigits: v<10?4:(v<1000?2:0)}).format(v);
+const dfmt = t => { const d=new Date(t); return String(d.getUTCDate()).padStart(2,'0')+'/'+String(d.getUTCMonth()+1).padStart(2,'0')+'/'+d.getUTCFullYear(); };
+const cls = v => v > 0.005 ? 'pos' : (v < -0.005 ? 'neg' : '');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const priceNum = v => { const a=Math.abs(v); return sym()+' '+new Intl.NumberFormat('es-AR',{minimumFractionDigits: a>=1000?0:2, maximumFractionDigits: a<1?4:(a>=1000?0:2)}).format(v); };
+
+// ══ XIRR ══
+function xirr(flows){
+  if (flows.length < 2) return null;
+  if (!flows.some(f=>f[1]>0) || !flows.some(f=>f[1]<0)) return null;
+  const t0 = flows[0][0];
+  const f = r => flows.reduce((s,[t,v]) => s + v/Math.pow(1+r,(t-t0)/(365*DAY)), 0);
+  let lo=-0.99, hi=10, flo=f(lo), fhi=f(hi);
+  if (flo*fhi > 0) return null;
+  for (let k=0;k<200;k++){ const mid=(lo+hi)/2, fm=f(mid); if (Math.abs(fm)<1e-7) return mid; if (flo*fm<0){hi=mid;fhi=fm;} else {lo=mid;flo=fm;} }
+  return (lo+hi)/2;
+}
+
+// ══ MODELO ══
+function buildModel(){
+  const rows = ROWS.slice().sort((a,b)=>a.t-b.t || a.n-b.n);
+  const pos = {};
+  const getPos = (b,s,mon) => pos[b+'|'+s] || (pos[b+'|'+s] = {b, s, cls:mon, q:0, cost:0, bought:0, proceeds:0, first:null, realized:0, rentas:0, flows:[], lastSale:null});
+  const saleCash = {};
+  rows.forEach(r => { if (r.m==='Venta / Rescate' && r.op==='INGRESO' && CASH.has(r.mon) && r.s) { const k=r.f+'|'+r.s; saleCash[k]=(saleCash[k]||0)+usdOf(r); } });
+  const cash = {};
+  const flowRows = [];
+  rows.forEach(r => {
+    if (r.m === 'Valuacion') return;
+    if (INSTR.has(r.mon) && r.s && !EXCLUIDOS(r.s, r.t)) {
+      const p = getPos(r.b, r.s, r.mon); p.cls = r.mon;
+      const u = usdOf(r);
+      if (r.op === 'INGRESO') {
+        p.q += (r.q || 0); p.cost += u; p.bought += u; if (!p.first && r.m !== 'Split' && r.m !== 'Canje') p.first = r.t;
+        if (u) p.flows.push([r.t, -u]);
+      } else {
+        const qs = r.q || 0; const avg = p.q ? p.cost/p.q : 0; const costOut = avg*qs;
+        const k = r.f+'|'+r.s; const proceeds = (saleCash[k] != null) ? saleCash[k] : u;
+        if (saleCash[k] != null) delete saleCash[k];
+        p.realized += proceeds - costOut; p.proceeds += proceeds; p.cost -= costOut; p.q -= qs; p.lastSale = r.t;
+        p.flows.push([r.t, proceeds]);
+        if (Math.abs(p.q) < 1e-6) { p.q = 0; p.cost = 0; }
+      }
+    }
+    if ((r.m === 'Dividendos' || r.m === 'Cupones') && r.s && !EXCLUIDOS(r.s, r.t)) {
+      const p = pos[r.b+'|'+r.s] || Object.values(pos).find(x=>x.s===r.s) || getPos(r.b, r.s, 'CEDEAR');
+      const u = usdOf(r) * sgn(r); p.rentas += u; p.flows.push([r.t, u]);
+    }
+    if (CASH.has(r.mon) && r.af !== 'NO') {
+      (cash[r.b] = cash[r.b] || {}); cash[r.b][r.mon] = (cash[r.b][r.mon]||0) + sgn(r)*r.amt;
+    }
+    flowRows.push(r);
+  });
+  const list = Object.values(pos);
+  list.forEach(p => {
+    const pr = PRICES.items[p.s];
+    p.open = p.q > 1e-6;
+    p.priced = !!(pr && p.b === 'PPI' && p.open);
+    p.unit = p.priced ? pr.valor / pr.q : null;
+    p.per = FIJA.has(p.cls) ? 100 : 1;
+    p.value = p.open ? (p.priced ? p.q * p.unit : p.cost) : 0;
+    p.unreal = p.open && p.priced ? p.value - p.cost : 0;
+    p.total = p.unreal + p.realized + p.rentas;
+    const fl = p.flows.slice().sort((a,b)=>a[0]-b[0]); if (p.open && p.value) fl.push([PRICE_T, p.value]);
+    p.irr = xirr(fl);
+    p.young = p.first && (PRICE_T - p.first) < 365*DAY;
+    if (p.open && !p.priced && p.cost < 5) p.residual = true;
+  });
+  const open = list.filter(p => p.open && !p.residual);
+  const closed = list.filter(p => !p.open || p.residual);
+  const places = {};
+  Object.entries(cash).forEach(([b,m]) => {
+    const pl = places[b] = places[b] || {liq:0, inv:0};
+    Object.entries(m).forEach(([mon,v]) => { pl.liq += mon==='PESOS' ? v/PRICES.mep : v; });
+  });
+  list.filter(p=>p.open).forEach(p => { (places[p.b] = places[p.b] || {liq:0, inv:0}).inv += p.value; });
+  const liq = Object.values(places).reduce((s,p)=>s+p.liq,0);
+  const inv = list.reduce((s,p)=>s+(p.open?p.value:0),0);
+  const invCost = list.reduce((s,p)=>s+(p.open?p.cost:0),0);
+  const res = { unreal: list.reduce((s,p)=>s+p.unreal,0), realized: list.reduce((s,p)=>s+p.realized,0), rentas: list.reduce((s,p)=>s+p.rentas,0) };
+  res.total = res.unreal + res.realized + res.rentas;
+  const allFl = list.flatMap(p => p.flows).concat(inv ? [[PRICE_T, inv]] : []).sort((a,b)=>a[0]-b[0]);
+  const lastT = rows.length ? rows[rows.length-1].t : PRICE_T;
+  const bought = list.reduce((s,p)=>s+p.bought,0);
+  const sales = list.reduce((s,p)=>s+p.proceeds,0);
+  const closedRes = closed.reduce((s,p)=>s+p.total,0);
+  return {rows, pos:list, open, closed, places, cash, liq, inv, invCost, res, irr: xirr(allFl), flowRows, lastT, bought, sales, closedRes};
+}
+
+// ══ FLUJO ══
+function flowOf(r){
+  const u = usdOf(r);
+  // filas con AFECTA SALDO = NO (cupones históricos del GD35): cuentan como renta, no como movimiento de caja
+  if (r.af === 'NO' && !(r.m === 'Dividendos' || r.m === 'Cupones' || r.m === 'Intereses')) return null;
+  if (r.m === 'Cobro Honorarios') return {kind:'hon', sub: r.cli || 'Sin cliente', usd: sgn(r)*u};
+  if (r.m === 'Dividendos' || r.m === 'Cupones' || r.m === 'Intereses') return {kind:'renta', sub: r.m, usd: sgn(r)*u};
+  if (r.m === 'Gastos') return {kind:'gasto', sub: r.cat || 'Gastos personales', usd: -sgn(r)*u};
+  if (r.m === 'Murillo') return {kind:'murillo', sub: 'Murillo', usd: -sgn(r)*u};
+  if (r.m === 'Venta / Rescate' && !r.s && (r.mon==='USD'||r.mon==='USD CCL') && r.op==='SALIDA' && r.cat !== 'Cambio de moneda')
+    return {kind:'gasto', sub:'Gastos en pesos (venta de USD)', usd: u};
+  return null;
+}
+function buildMonthCols(){
+  const e = new Date(Math.max(M.lastT, Date.now())); const cols = []; const endFirst = Date.UTC(e.getUTCFullYear(), e.getUTCMonth(), 1);
+  let y = 2025, mo = 0;
+  while (Date.UTC(y,mo,1) <= endFirst) {
+    cols.push({year:y, month:mo, label:MESES[mo]+'-'+String(y).slice(2), sortKey:y*12+mo, end: Date.UTC(y,mo+1,1)-1});
+    mo++; if (mo === 12) { mo = 0; y++; }
+  }
+  return cols;
+}
+
+// ══ RANGO DE FECHAS ══
+let RANGE = {from:0, to:0, preset:'all'};
+const todayUTC = () => { const d = new Date(); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()); };
+const isoOf = t => new Date(t).toISOString().slice(0,10);
+const PRESETS = [
+  {id:'all', label:'Todo el historial'},
+  {id:'month', label:'Este mes'},
+  {id:'prevmonth', label:'Mes anterior'},
+  {id:'3m', label:'Últimos 3 meses'},
+  {id:'12m', label:'Últimos 12 meses'},
+  {id:'year', label:'Este año'},
+  {id:'prevyear', label:'Año anterior'}
+];
+function presetRange(id){
+  const T = todayUTC(), d = new Date(T), y = d.getUTCFullYear(), mo = d.getUTCMonth();
+  const endT = Math.max(T, M.lastT);
+  switch (id) {
+    case 'month': return [Date.UTC(y,mo,1), endT];
+    case 'prevmonth': return [Date.UTC(y,mo-1,1), Date.UTC(y,mo,0)];
+    case '3m': return [Date.UTC(y,mo-2,1), endT];
+    case '12m': return [Date.UTC(y,mo-11,1), endT];
+    case 'year': return [Date.UTC(y,0,1), endT];
+    case 'prevyear': return [Date.UTC(y-1,0,1), Date.UTC(y-1,11,31)];
+    default: return [M.rows.length ? M.rows[0].t : Date.UTC(2025,0,1), endT];
+  }
+}
+function setPreset(id){ const [f,t] = presetRange(id); RANGE = {from:f, to:t, preset:id}; syncRangeUI(); renderPeriod(); }
+function rangeLabel(){ const p = PRESETS.find(x=>x.id===RANGE.preset); return p && RANGE.preset!=='custom' ? (p.id==='all' ? 'Todo el historial' : p.label + ' (' + dfmt(RANGE.from) + ' – ' + dfmt(RANGE.to) + ')') : dfmt(RANGE.from) + ' – ' + dfmt(RANGE.to); }
+function syncRangeUI(){
+  const f = document.getElementById('rg-from'), t = document.getElementById('rg-to');
+  f.value = dfmt(RANGE.from); t.value = dfmt(RANGE.to); f.classList.remove('bad'); t.classList.remove('bad');
+  syncChipsAndBadge();
+}
+function chipEl(cls, text, onclick, active){
+  const el = document.createElement('button'); el.type='button'; el.className = cls + (active?' active':''); el.textContent = text; el.onclick = onclick; return el;
+}
+// Campos de fecha dd/mm/aaaa (se pueden escribir) + almanaque propio
+const MESES_L = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function parseDMY(v){ const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v.trim()); if (!m) return null; const d=+m[1], mo=+m[2], y=+m[3];
+  if (y < 2000 || y > 2100 || mo < 1 || mo > 12) return null; const t = Date.UTC(y, mo-1, d); if (new Date(t).getUTCDate() !== d) return null; return t; }
+function maskDMY(el){ const digits = el.value.replace(/\D/g,'').slice(0,8); let out = digits.slice(0,2); if (digits.length>2) out += '/' + digits.slice(2,4); if (digits.length>4) out += '/' + digits.slice(4); el.value = out; }
+function applyDates(){
+  const fe = document.getElementById('rg-from'), te = document.getElementById('rg-to');
+  let f = parseDMY(fe.value), t = parseDMY(te.value);
+  fe.classList.toggle('bad', f == null && fe.value.length > 0); te.classList.toggle('bad', t == null && te.value.length > 0);
+  if (f == null || t == null) return false;
+  if (f > t) [f, t] = [t, f];
+  RANGE = {from:f, to:t, preset:'custom'}; syncRangeUI(); renderPeriod(); return true;
+}
+function syncChipsAndBadge(){
+  const box = document.getElementById('presets'); box.innerHTML = '';
+  PRESETS.forEach(p => box.appendChild(chipEl('period-chip', p.label, () => setPreset(p.id), RANGE.preset === p.id)));
+  document.getElementById('period-badge').textContent = rangeLabel();
+}
+['rg-from','rg-to'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => { maskDMY(el); el.classList.remove('bad'); if (el.value.length === 10 && parseDMY(el.value) != null) applyDates(); });
+  el.addEventListener('blur', () => { if (!applyDates() && !el.value) syncRangeUI(); });
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') { applyDates(); el.blur(); } });
+});
+let dpOpen = null;
+function openCal(inputId){
+  closeCal();
+  const wrap = document.getElementById(inputId).parentElement, pop = wrap.querySelector('.dp-pop');
+  const cur = parseDMY(document.getElementById(inputId).value) ?? (inputId==='rg-from' ? RANGE.from : RANGE.to);
+  const d = new Date(cur); dpOpen = {inputId, pop, y: d.getUTCFullYear(), m: d.getUTCMonth()};
+  pop.hidden = false; renderCal();
+}
+function closeCal(){ if (dpOpen) { dpOpen.pop.hidden = true; dpOpen = null; } }
+function renderCal(){
+  const {pop, y, m, inputId} = dpOpen;
+  const minY = new Date(M.rows.length ? M.rows[0].t : Date.UTC(2017,0,1)).getUTCFullYear(), maxY = new Date(todayUTC()).getUTCFullYear();
+  const first = Date.UTC(y, m, 1), startDow = (new Date(first).getUTCDay() + 6) % 7; // lunes = 0
+  const sel = inputId==='rg-from' ? RANGE.from : RANGE.to, T = todayUTC();
+  let html = `<div class="dp-head"><button type="button" class="dp-nav" data-nav="-1" aria-label="Mes anterior">‹</button>
+    <select data-k="m" aria-label="Mes">${MESES_L.map((n,i)=>`<option value="${i}" ${i===m?'selected':''}>${n}</option>`).join('')}</select>
+    <select data-k="y" aria-label="Año">${Array.from({length:maxY-minY+1},(_,i)=>minY+i).map(v=>`<option value="${v}" ${v===y?'selected':''}>${v}</option>`).join('')}</select>
+    <button type="button" class="dp-nav" data-nav="1" aria-label="Mes siguiente">›</button></div><div class="dp-grid">` +
+    ['Lu','Ma','Mi','Ju','Vi','Sá','Do'].map(x=>`<div class="dow">${x}</div>`).join('');
+  for (let i = 0; i < 42; i++) {
+    const t = Date.UTC(y, m, 1 - startDow + i), dd = new Date(t);
+    const c = [dd.getUTCMonth()!==m?'out':'', t===sel?'sel':'', (t>=RANGE.from && t<=RANGE.to && t!==sel)?'inr':'', t===T?'today':''].filter(Boolean).join(' ');
+    html += `<button type="button" class="${c}" data-t="${t}">${dd.getUTCDate()}</button>`;
+    if (i >= 34 && new Date(Date.UTC(y, m, 1 - startDow + i + 1)).getUTCMonth() !== m && i % 7 === 6) break;
+  }
+  pop.innerHTML = html + '</div>';
+  pop.querySelectorAll('[data-nav]').forEach(b => b.onclick = e => { e.stopPropagation(); dpOpen.m += +b.dataset.nav; if (dpOpen.m < 0) { dpOpen.m = 11; dpOpen.y--; } if (dpOpen.m > 11) { dpOpen.m = 0; dpOpen.y++; } renderCal(); });
+  pop.querySelectorAll('select').forEach(sl => sl.onchange = e => { e.stopPropagation(); dpOpen[sl.dataset.k] = +sl.value; renderCal(); });
+  pop.querySelectorAll('[data-t]').forEach(b => b.onclick = e => { e.stopPropagation(); document.getElementById(inputId).value = dfmt(+b.dataset.t); closeCal(); applyDates(); });
+}
+document.querySelectorAll('.dp-btn').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); const id = b.dataset.for; if (dpOpen && dpOpen.inputId === id) closeCal(); else openCal(id); }));
+document.addEventListener('click', e => { if (dpOpen && !dpOpen.pop.contains(e.target)) closeCal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCal(); });
+const inRange = t => t >= RANGE.from && t <= RANGE.to + DAY - 1;
+
+// ══ CHART HELPERS ══
+// El detalle del hover se muestra en una franja arriba del gráfico: no tapa las barras.
+const STRIP_DEFAULT = {};
+function stripTooltip(stripId, fmt){
+  return { enabled:false, external: ({chart, tooltip}) => {
+    const el = document.getElementById(stripId); if (!el) return;
+    if (!tooltip || tooltip.opacity === 0 || !tooltip.dataPoints || !tooltip.dataPoints.length) { el.innerHTML = STRIP_DEFAULT[stripId] || ''; return; }
+    el.innerHTML = fmt(tooltip.dataPoints, chart);
+  }};
+}
+function stdStrip(points, horizontal){
+  const title = points[0].label;
+  const vis = points.filter(p => (horizontal ? p.parsed.x : p.parsed.y) != null);
+  const items = vis.map(p => {
+    const v = horizontal ? p.parsed.x : p.parsed.y;
+    const c = Array.isArray(p.dataset.backgroundColor) ? p.dataset.backgroundColor[p.dataIndex] : p.dataset.backgroundColor;
+    return `<span class="hs-item"><span class="dot" style="background:${c}"></span>${esc(p.dataset.label)} <b>${money(v)}</b></span>`;
+  });
+  if (vis.length > 1) { const tot = vis.reduce((s,p)=>s+((horizontal?p.parsed.x:p.parsed.y)||0),0); items.push(`<span class="hs-item">Total <b>${money(tot)}</b></span>`); }
+  return `<b>${esc(title)}</b>${items.join('')}`;
+}
+function deepMerge(a, b){ Object.entries(b).forEach(([k,v]) => { if (v && typeof v==='object' && !Array.isArray(v) && a[k] && typeof a[k]==='object') deepMerge(a[k], v); else a[k] = v; }); return a; }
+function baseOpts(stripId, extra={}, horizontal=false){
+  const t2 = css('--text2'), grid = 'rgba(255,255,255,.07)';
+  STRIP_DEFAULT[stripId] = '<span>Pasá el mouse por el gráfico para ver el detalle.</span>';
+  const o = {
+    responsive:true, maintainAspectRatio:false, animation:false, indexAxis: horizontal ? 'y' : 'x',
+    interaction:{mode:'index', intersect:false, axis: horizontal ? 'y' : 'x'},
+    plugins:{ legend:{display:false}, tooltip: stripTooltip(stripId, pts => stdStrip(pts, horizontal)) },
+    scales: horizontal ? {
+      x:{ ticks:{color:t2, font:{size:11}, callback:v=>short(v)}, grid:{color:grid}, border:{display:false} },
+      y:{ ticks:{color:css('--text'), font:{size:12}}, grid:{display:false} } } : {
+      x:{ ticks:{color:t2, font:{size:11}}, grid:{display:false}, border:{color:grid} },
+      y:{ ticks:{color:t2, font:{size:11}, callback:v=>short(v)}, grid:{color:grid}, border:{display:false} } }
+  };
+  return deepMerge(o, extra);
+}
+function draw(id, config, stripId){
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id), config);
+  if (stripId) document.getElementById(stripId).innerHTML = STRIP_DEFAULT[stripId] || '';
+}
+const valueLabels = (fmt) => ({id:'vals', afterDatasetsDraw(ch){ const {ctx}=ch; ctx.save(); ctx.font='12px -apple-system, Segoe UI, Arial'; ctx.fillStyle=css('--text2'); ctx.textBaseline='middle';
+  ch.getDatasetMeta(0).data.forEach((b,i)=>{ const t=fmt(i); if (!t) return; const w=ctx.measureText(t).width; ctx.fillText(t, b.x >= b.base ? b.x + 6 : b.x - w - 6, b.y); }); ctx.restore(); }});
+
+// ══ RENDER HOY ══
+function renderToday(){
+  const m = M;
+  const total = m.liq + m.inv;
+  document.getElementById('today-note').textContent = `Valuado con el estado de cuenta de PPI del ${dfmt(PRICE_T)} (dólar MEP $ ${nf2.format(PRICES.mep)}).`;
+  renderControl();
+  const k = [
+    {l:'Patrimonio total', v:money(cv(total)), c:'kpi-blue', s:`Liquidez <b>${pct0(m.liq/total)}</b> · Inversiones <b>${pct0(m.inv/total)}</b>`},
+    {l:'Liquidez', v:money(cv(m.liq)), c:'kpi-liq', s:'Efectivo y saldos en cuentas. Detalle por lugar y moneda en "Dónde está la plata"'},
+    {l:'Inversiones a precio de mercado', v:money(cv(m.inv)), c:'kpi-purple', s:`Costo ${money(cv(m.invCost))}`},
+    {l:'Resultado de las inversiones', v:money(cv(m.res.total),{plus:true}), vc:cls(m.res.total), c:(m.res.total>=0?'pos':'neg')+' hero',
+      s:`Lo que tenés y cobraste, menos lo que pusiste${m.closed.length?`. Incluye posiciones cerradas (${money(cv(m.closedRes),{plus:true})})`:''}`},
+    {l:'Rendimiento anual (TIR en USD)', v:pct(m.irr), vc:cls(m.irr), c:'kpi-orange', s:'Toda la cartera, desde cada compra. Sin la liquidez.'}
+  ];
+  document.getElementById('kpi-today').innerHTML = k.map(x=>`<div class="kpi ${x.c}"><div class="kpi-label">${x.l}</div><div class="kpi-val ${x.vc||''}">${x.v}</div><div class="kpi-sub">${x.s}</div></div>`).join('');
+
+  // por lugar
+  const pl = Object.entries(m.places).filter(([b,p])=>Math.abs(p.liq)+Math.abs(p.inv) > 0.5).sort((a,b)=>(b[1].liq+b[1].inv)-(a[1].liq+a[1].inv));
+  const nice = b => ({'CAJA CASA':'Caja Casa','CAJA BRIAN':'Caja Brian','CAJA DANIEL T':'Caja Daniel T.'}[b] || b);
+  draw('ch-lugar', {type:'bar', data:{labels:pl.map(([b])=>nice(b)), datasets:[
+      {label:'Liquidez', data:pl.map(([b,p])=>cv(p.liq)), backgroundColor:css('--liq'), borderColor:css('--surface'), borderWidth:{right:2}, borderSkipped:false, borderRadius:4},
+      {label:'Inversiones', data:pl.map(([b,p])=>cv(p.inv)), backgroundColor:css('--s1'), borderRadius:4, borderSkipped:false}]},
+    options: baseOpts('hs-lugar', {scales:{x:{stacked:true}, y:{stacked:true}}}, true)}, 'hs-lugar');
+
+  // por clase
+  const byCls = {};
+  m.pos.filter(p=>p.open).forEach(p => { byCls[p.cls] = (byCls[p.cls]||0) + p.value; });
+  const items = Object.entries(byCls).map(([c,v])=>({label:CLASS_NAME[c]||c, v, color:css(CLASS_COLOR[c]||'--s6')}));
+  items.push({label:'Liquidez', v:m.liq, color:css('--liq')});
+  items.sort((a,b)=>b.v-a.v);
+  draw('ch-clase', {type:'bar', data:{labels:items.map(i=>i.label), datasets:[{label:'Valor', data:items.map(i=>cv(i.v)), backgroundColor:items.map(i=>i.color), borderRadius:4, borderSkipped:false}]},
+    options: baseOpts('hs-clase', {layout:{padding:{right:48}}, plugins:{tooltip: stripTooltip('hs-clase', pts => { const p=pts[0]; return `<b>${esc(p.label)}</b><span class="hs-item"><b>${money(p.parsed.x)}</b></span><span class="hs-item">${pct(items[p.dataIndex].v/total,false)} del patrimonio</span>`; })}}, true),
+    plugins:[valueLabels(i => pct0(items[i].v/total))]}, 'hs-clase');
+
+  // exposición (porcentajes dentro de la barra)
+  let ar=0, ext=0, fija=0, varb=0;
+  m.pos.filter(p=>p.open).forEach(p => { const geo = (INFO[p.s]||{}).geo || (p.cls==='CEDEAR'?'EXT':'AR');
+    if (geo==='AR') ar+=p.value; else ext+=p.value; if (FIJA.has(p.cls)) fija+=p.value; else varb+=p.value; });
+  const stack = (title, parts) => `<div class="stack-row"><div class="stack-head">${title}</div>
+    <div class="stackbar" role="img" aria-label="${title}">${parts.filter(p=>p.v>0).map(p=>{ const sh=p.v/total; return `<div style="flex:${p.v};background:${p.c}" title="${p.l}: ${money(cv(p.v))} (${pct(sh,false)})">${sh>=0.05?pct0(sh):''}</div>`; }).join('')}</div>
+    <div class="legend" style="margin:8px 0 0">${parts.map(p=>`<span><span class="dot" style="background:${p.c}"></span>${p.l} · ${money(cv(p.v))}</span>`).join('')}</div></div>`;
+  document.getElementById('exposicion').innerHTML =
+    stack('Argentina, exterior y liquidez', [{l:'Activos argentinos',v:ar,c:css('--s1')},{l:'Activos del exterior (CEDEARs y FCI Brasil)',v:ext,c:css('--s2')},{l:'Liquidez',v:m.liq,c:css('--liq')}]) +
+    stack('Renta fija, renta variable y liquidez', [{l:'Renta fija (bonos y ON)',v:fija,c:css('--s4')},{l:'Renta variable (acciones, CEDEARs, FCI)',v:varb,c:css('--s6')},{l:'Liquidez',v:m.liq,c:css('--liq')}]);
+
+  renderLiquidez();
+  renderCartera();
+  renderClosed();
+
+  renderResultado();
+
+  renderCobros();
+  renderAnual();
+}
+
+// Resultado por instrumento: en dólares (apilado por origen) o en % sobre lo invertido
+let resMode = 'usd';
+function renderResultado(){
+  const m = M;
+  const rs = m.open.filter(p => p.priced || Math.abs(p.total) >= 1);
+  const pctOf = p => p.bought ? p.total / p.bought : 0;
+  rs.sort((a,b) => resMode==='usd' ? b.total-a.total : pctOf(b)-pctOf(a));
+  const labels = rs.map(p => p.s + (p.b!=='PPI' ? ' ('+p.b+')' : ''));
+  document.getElementById('res-wrap').style.height = Math.max(220, rs.length*30+40)+'px';
+  const lg = document.getElementById('lg-resultado'), sub = document.getElementById('res-sub');
+  const endLabels = fmt => ({id:'endLabels', afterDatasetsDraw(ch){ const {ctx}=ch, xs=ch.scales.x; ctx.save(); ctx.font='600 12px -apple-system, Segoe UI, Arial'; ctx.textBaseline='middle';
+    ch.getDatasetMeta(0).data.forEach((bar,i)=>{ let pos=0, neg=0; ch.data.datasets.forEach(d=>{ const v=d.data[i]||0; if (v>0) pos+=v; else neg+=v; });
+      const t = fmt(i), v = pos+neg; ctx.fillStyle = v>=0 ? css('--green') : css('--red');
+      if (v >= 0) ctx.fillText(t, xs.getPixelForValue(pos)+8, bar.y); else { const w=ctx.measureText(t).width; ctx.fillText(t, xs.getPixelForValue(neg)-w-8, bar.y); } }); ctx.restore(); }});
+  if (resMode === 'usd') {
+    sub.textContent = 'De dónde sale lo que ganaste con cada especie';
+    lg.innerHTML = `<span><span class="dot" style="background:var(--s1)"></span>Suba de precio</span><span><span class="dot" style="background:var(--s4)"></span>Ganancia en ventas</span><span><span class="dot" style="background:var(--s3)"></span>Cupones y dividendos</span>`;
+    const ds = (label, key, color) => ({label, data: rs.map(p => cv(p[key])), backgroundColor: css(color), borderColor: css('--surface'), borderWidth: 1, borderSkipped: false, barThickness: 18});
+    draw('ch-resultado', {type:'bar', data:{labels, datasets:[ds('Suba de precio','unreal','--s1'), ds('Ganancia en ventas','realized','--s4'), ds('Cupones y dividendos','rentas','--s3')]},
+      options: baseOpts('hs-resultado', {layout:{padding:{right:96, left:8}}, scales:{x:{stacked:true}, y:{stacked:true}}, plugins:{tooltip: stripTooltip('hs-resultado', pts => { const p=rs[pts[0].dataIndex];
+        return `<b>${esc(p.s)}</b><span class="hs-item">Resultado <b>${money(cv(p.total),{plus:true})}</b></span><span class="hs-item"><span class="dot" style="background:var(--s1)"></span>Suba de precio <b>${money(cv(p.unreal),{plus:true})}</b></span><span class="hs-item"><span class="dot" style="background:var(--s4)"></span>Ventas <b>${money(cv(p.realized),{plus:true})}</b></span><span class="hs-item"><span class="dot" style="background:var(--s3)"></span>Cupones y dividendos <b>${money(cv(p.rentas),{plus:true})}</b></span>`; })}}, true),
+      plugins:[endLabels(i => money(cv(rs[i].total),{plus:true}))]}, 'hs-resultado');
+  } else {
+    sub.textContent = 'Resultado total de cada especie sobre todo lo que pusiste en ella: sirve para comparar especies de distinto tamaño';
+    lg.innerHTML = '';
+    draw('ch-resultado', {type:'bar', data:{labels, datasets:[{label:'% resultado', data: rs.map(p => pctOf(p)*100), backgroundColor: rs.map(p => pctOf(p)>=0 ? css('--green') : css('--red')), borderRadius:4, borderSkipped:false, barThickness:18}]},
+      options: baseOpts('hs-resultado', {layout:{padding:{right:70, left:8}}, scales:{x:{ticks:{callback:v=>nf0.format(v)+'%'}}}, plugins:{tooltip: stripTooltip('hs-resultado', pts => { const p=rs[pts[0].dataIndex];
+        return `<b>${esc(p.s)}</b><span class="hs-item">Resultado <b>${pct(pctOf(p))}</b></span><span class="hs-item">${money(cv(p.total),{plus:true})} sobre ${money(cv(p.bought))} invertidos</span>`; })}}, true),
+      plugins:[endLabels(i => pct(pctOf(rs[i])))]}, 'hs-resultado');
+  }
+}
+document.getElementById('res-usd').onclick = () => { resMode='usd'; document.getElementById('res-usd').classList.add('active'); document.getElementById('res-pct').classList.remove('active'); renderResultado(); };
+document.getElementById('res-pct').onclick = () => { resMode='pct'; document.getElementById('res-pct').classList.add('active'); document.getElementById('res-usd').classList.remove('active'); renderResultado(); };
+
+function renderLiquidez(){
+  const nice = b => ({'CAJA CASA':'Caja Casa','CAJA BRIAN':'Caja Brian','CAJA DANIEL T':'Caja Daniel T.'}[b] || b);
+  const rows = Object.entries(M.cash).map(([b,c]) => ({b, mep:c.USD||0, ccl:c['USD CCL']||0, ars:c.PESOS||0}))
+    .map(r => ({...r, tot: r.mep + r.ccl + r.ars/PRICES.mep})).filter(r => Math.abs(r.mep)+Math.abs(r.ccl)+Math.abs(r.ars) > 0.005)
+    .sort((a,b)=>b.tot-a.tot);
+  const T = rows.reduce((a,r)=>({mep:a.mep+r.mep, ccl:a.ccl+r.ccl, ars:a.ars+r.ars, tot:a.tot+r.tot}), {mep:0,ccl:0,ars:0,tot:0});
+  const usd = v => Math.abs(v) < 0.005 ? '<span class="muted">—</span>' : 'US$ ' + (v<0?'−':'') + nf2.format(Math.abs(v));
+  const ars = v => Math.abs(v) < 0.005 ? '<span class="muted">—</span>' : '$ ' + (v<0?'−':'') + nf2.format(Math.abs(v));
+  document.getElementById('tbl-liq').innerHTML = `<thead><tr><th>Lugar</th><th>Dólares MEP</th><th>Dólares CCL</th><th>Pesos</th><th>Total en ${CUR==='ARS'?'pesos':'US$ MEP'}</th></tr></thead><tbody>` +
+    rows.map(r => `<tr><td><span class="sym">${esc(nice(r.b))}</span></td><td>${usd(r.mep)}</td><td>${usd(r.ccl)}</td><td class="${r.ars<0?'neg':''}">${ars(r.ars)}</td><td class="strong">${money(cv(r.tot))}</td></tr>`).join('') +
+    `<tr class="total"><td>Total</td><td>${usd(T.mep)}</td><td>${usd(T.ccl)}</td><td>${ars(T.ars)}</td><td>${money(cv(T.tot))}</td></tr></tbody>`;
+}
+
+// Cartera con orden por columna
+const CART_COLS = [
+  {key:'s', label:'Especie', l:true, get:p=>p.s},
+  {key:'tipo', label:'Tipo', l:true, get:p=>CLASS_NAME[p.cls]||p.cls},
+  {key:'b', label:'Lugar', l:true, get:p=>p.b},
+  {key:'q', label:'Cantidad', get:p=>p.q},
+  {key:'ppc', label:'Precio prom. compra', get:p=>p.q?p.cost/p.q*p.per:0},
+  {key:'px', label:'Precio actual', get:p=>p.unit!=null?p.unit*p.per:-1},
+  {key:'cost', label:'Costo', get:p=>p.cost},
+  {key:'value', label:'Valor actual', get:p=>p.value},
+  {key:'unreal', label:'No realizado', get:p=>p.unreal},
+  {key:'realized', label:'Realizado', get:p=>p.realized},
+  {key:'rentas', label:'Rentas', get:p=>p.rentas},
+  {key:'total', label:'Resultado total', get:p=>p.total},
+  {key:'totalPct', label:'% resultado', get:p=>p.bought?p.total/p.bought:-9},
+  {key:'irr', label:'TIR anual', get:p=>p.young||p.irr==null?-9:p.irr},
+  {key:'peso', label:'Peso', get:p=>p.value}
+];
+function renderCartera(){
+  const m = M;
+  const col = CART_COLS.find(c=>c.key===cartSort.key) || CART_COLS[6];
+  const rows = m.open.slice().sort((a,b)=>{ const va=col.get(a), vb=col.get(b); return (typeof va==='string' ? va.localeCompare(vb) : va-vb) * cartSort.dir; });
+  const head = '<thead><tr>' + CART_COLS.map(c=>`<th class="sortable ${c.l?'l':''}" tabindex="0" data-key="${c.key}" title="Ordenar por ${c.label}">${c.label}<span class="arrow">${cartSort.key===c.key?(cartSort.dir>0?'▲':'▼'):''}</span></th>`).join('') + '</tr></thead>';
+  const body = rows.map(p => {
+    const ppc = p.q ? cv(p.cost)/p.q*p.per : null;
+    const px = p.priced ? cv(p.unit)*p.per : null;
+    return `<tr><td><span class="cdot" style="background:${css(CLASS_COLOR[p.cls]||'--s6')}" title="${CLASS_NAME[p.cls]||p.cls}"></span><span class="sym">${esc(p.s)}</span><span class="tag">${esc((INFO[p.s]||{}).name||'')}</span></td>
+    <td class="l">${CLASS_NAME[p.cls]||p.cls}</td><td class="l">${esc(p.b)}</td><td>${qty(p.q)}</td><td>${ppc==null?'—':priceNum(ppc)}</td>
+    <td>${px==null?'<span class="chip warn" title="No hay precio de PPI para esta especie en este lugar; se muestra al costo">sin precio</span>':priceNum(px)}</td>
+    <td>${money(cv(p.cost))}</td><td class="strong">${money(cv(p.value))}</td>
+    <td class="${cls(p.unreal)}">${p.priced?money(cv(p.unreal),{plus:true}):'—'}</td>
+    <td class="${cls(p.realized)}">${p.realized?money(cv(p.realized),{plus:true}):'—'}</td><td class="${cls(p.rentas)}">${p.rentas?money(cv(p.rentas),{plus:true}):'—'}</td>
+    <td class="${cls(p.total)}" style="font-weight:600">${p.priced||p.rentas||p.realized?money(cv(p.total),{plus:true}):'—'}</td><td class="${cls(p.total)}" title="Resultado total sobre todo lo que pusiste en esta especie">${(p.priced||p.rentas||p.realized)&&p.bought?pct(p.total/p.bought):'—'}</td>
+    <td class="${p.young?'muted':cls(p.irr)}">${p.young?'<span title="Con menos de un año de tenencia la tasa anualizada exagera; se muestra a partir del año">menos de 1 año</span>':(p.priced||p.rentas?pct(p.irr):'—')}</td>
+    <td>${pct(p.value/m.inv,false)}</td></tr>`; }).join('');
+  const tot = m.open.reduce((a,p)=>({cost:a.cost+p.cost, value:a.value+p.value, unreal:a.unreal+p.unreal, realized:a.realized+p.realized, rentas:a.rentas+p.rentas, total:a.total+p.total}), {cost:0,value:0,unreal:0,realized:0,rentas:0,total:0});
+  const cr = m.closedRes, bOpen = m.open.reduce((s,p)=>s+p.bought,0), bAll = m.bought;
+  const closedRow = m.closed.length ? `<tr class="closed-row"><td>Posiciones cerradas</td><td class="l" colspan="10" style="white-space:normal">${m.closed.filter(p=>Math.abs(p.total)>=1).map(p=>esc(p.s)).join(', ')} · detalle abajo</td><td class="${cls(cr)}">${money(cv(cr),{plus:true})}</td><td></td><td></td><td></td></tr>` : '';
+  const foot = closedRow + `<tr class="total"><td>Total</td><td></td><td></td><td></td><td></td><td></td><td>${money(cv(m.invCost))}</td><td>${money(cv(m.inv))}</td><td class="${cls(m.res.unreal)}">${money(cv(m.res.unreal),{plus:true})}</td><td class="${cls(m.res.realized)}">${money(cv(m.res.realized),{plus:true})}</td><td class="${cls(m.res.rentas)}">${money(cv(m.res.rentas),{plus:true})}</td><td class="${cls(m.res.total)}">${money(cv(m.res.total),{plus:true})}</td><td class="${cls(m.res.total)}">${pct(m.res.total/bAll)}</td><td class="${cls(m.irr)}" title="TIR de toda la cartera, incluidas las posiciones cerradas">${pct(m.irr)}</td><td>100%</td></tr>`;
+  document.getElementById('cart-resumen').innerHTML = `
+    <div class="rb"><div class="rl">Suba de precio de lo que tenés</div><div class="rv ${cls(m.res.unreal)}">${money(cv(m.res.unreal),{plus:true})}</div><div class="rl">Pagaste ${money(cv(m.invCost))} · hoy vale ${money(cv(m.inv))}</div></div><span class="op">+</span>
+    <div class="rb"><div class="rl">Ganancia en ventas</div><div class="rv ${cls(m.res.realized)}">${money(cv(m.res.realized),{plus:true})}</div><div class="rl">Lo que vendiste por encima de lo que te costó</div></div><span class="op">+</span>
+    <div class="rb"><div class="rl">Cupones y dividendos cobrados</div><div class="rv ${cls(m.res.rentas)}">${money(cv(m.res.rentas),{plus:true})}</div><div class="rl">Plata que te pagaron mientras las tenías</div></div><span class="op">=</span>
+    <div class="rb res ${m.res.total<0?'negative':''}"><div class="rl">Resultado total</div><div class="rv">${money(cv(m.res.total),{plus:true})} <span style="font-size:14px">(${pct(m.res.total/bAll)})</span></div><div class="rl">Sobre ${money(cv(bAll))} invertidos en total</div></div>`;
+
+  const t = document.getElementById('tbl-cartera');
+  t.innerHTML = head + '<tbody>' + body + foot + '</tbody>';
+  t.querySelectorAll('th.sortable').forEach(th => { const go = () => { const k = th.dataset.key; cartSort = {key:k, dir: cartSort.key===k ? -cartSort.dir : (k==='s'||k==='b'||k==='tipo'?1:-1)}; renderCartera(); };
+    th.onclick = go; th.onkeydown = e => { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); go(); } }; });
+}
+function renderClosed(){
+  const cl = M.closed.slice().sort((a,b)=>(b.realized+b.rentas)-(a.realized+a.rentas));
+  document.getElementById('closed-wrap').hidden = !cl.length;
+  document.getElementById('closed-summary').textContent = `Posiciones cerradas o residuales (${cl.length}) · resultado ${money(cv(cl.reduce((s,p)=>s+p.realized+p.rentas,0)),{plus:true})}`;
+  document.getElementById('tbl-cerradas').innerHTML = `<thead><tr><th>Especie</th><th class="l">Lugar</th><th>Última venta</th><th>Cantidad restante</th><th>Ganancia realizada</th><th>Rentas</th><th>Resultado</th></tr></thead><tbody>` +
+    cl.map(p=>`<tr><td><span class="cdot" style="background:${css(CLASS_COLOR[p.cls]||'--s6')}"></span><span class="sym">${esc(p.s)}</span></td><td class="l">${esc(p.b)}</td><td>${p.lastSale?dfmt(p.lastSale):'—'}</td><td>${p.q?qty(p.q):'—'}</td><td class="${cls(p.realized)}">${money(cv(p.realized),{plus:true})}</td><td>${p.rentas?money(cv(p.rentas),{plus:true}):'—'}</td><td class="${cls(p.realized+p.rentas)}" style="font-weight:600">${money(cv(p.realized+p.rentas),{plus:true})}</td></tr>`).join('') + '</tbody>';
+}
+
+// Cobros futuros: cronogramas de emisión × tus nominales
+function renderCobros(){
+  const now = Date.now();
+  const held = {}; M.pos.filter(p=>p.open && schedOf(p.s)).forEach(p => held[p.s] = (held[p.s]||0) + p.q);
+  const sinCron = [...new Set(M.pos.filter(p=>p.open && FIJA.has(p.cls) && !schedOf(p.s)).map(p=>p.s))];
+  const pays = [];
+  Object.entries(held).forEach(([s,q]) => schedOf(s).forEach(([d,ren,am]) => { const t = Date.parse(d); if (t > now - DAY) pays.push({t, s, ren: ren*q/100, am: am*q/100}); }));
+  pays.sort((a,b)=>a.t-b.t);
+  const years = [...new Set(pays.map(p=>new Date(p.t).getUTCFullYear()))];
+  const byY = years.map(y => pays.filter(p=>new Date(p.t).getUTCFullYear()===y));
+  const n12 = pays.filter(p=>p.t<=now+365*DAY).reduce((s,p)=>s+p.ren+p.am,0);
+  const totR = pays.reduce((s,p)=>s+p.ren,0), totA = pays.reduce((s,p)=>s+p.am,0);
+  document.getElementById('cobros-note').innerHTML = `Según las condiciones de emisión de cada bono, aplicadas a tus nominales. Próximos 12 meses: <b>${money(cv(n12))}</b>. Hasta el último vencimiento (${years.length?years[years.length-1]:'—'}): renta <b>${money(cv(totR))}</b> + devolución de capital <b>${money(cv(totA))}</b>. Montos en dólares, antes de gastos de cobranza.` +
+    (sinCron.length ? `<br><span class="warn">Sin cronograma cargado: <b>${sinCron.map(esc).join(', ')}</b>. Sus cobros no están incluidos todavía.</span>` : '');
+  draw('ch-cobros', {type:'bar', data:{labels:years.map(String), datasets:[
+      {label:'Renta', data:byY.map(a=>cv(a.reduce((s,p)=>s+p.ren,0))), backgroundColor:css('--s1'), borderColor:css('--surface'), borderWidth:{top:2}, borderSkipped:false, maxBarThickness:40},
+      {label:'Amortización', data:byY.map(a=>cv(a.reduce((s,p)=>s+p.am,0))), backgroundColor:css('--s4'), borderRadius:{topLeft:4, topRight:4}, borderSkipped:false, maxBarThickness:40}]},
+    options: baseOpts('hs-cobros', {scales:{x:{stacked:true}, y:{stacked:true}}})}, 'hs-cobros');
+  let html = `<thead><tr><th>Fecha</th><th class="l">Especie</th><th>Renta</th><th>Amortización</th><th>Total</th></tr></thead><tbody>`;
+  years.forEach((y,k) => {
+    const a = byY[k], r = a.reduce((s,p)=>s+p.ren,0), am = a.reduce((s,p)=>s+p.am,0);
+    html += `<tr class="year-sub"><td>${y}</td><td></td><td>${money(cv(r))}</td><td>${am?money(cv(am)):'—'}</td><td>${money(cv(r+am))}</td></tr>`;
+    html += a.map(p=>`<tr class="${p.t<=now+365*DAY?'next12':''}"><td>${dfmt(p.t)}</td><td class="l"><span class="sym">${p.s}</span><span class="tag">${esc((INFO[p.s]||INFO[p.s.replace(/[OC]$/,'D')]||{}).name||'')}</span></td><td>${money(cv(p.ren))}</td><td>${p.am?money(cv(p.am)):'—'}</td><td class="strong">${money(cv(p.ren+p.am))}</td></tr>`).join('');
+  });
+  document.getElementById('tbl-cobros').innerHTML = html + '</tbody>';
+}
+
+// ══ RENDER PERÍODO ══
+function renderPeriod(){
+  // columnas de los gráficos: meses entre el primer movimiento con flujo dentro del rango y el fin del rango
+  const fl = M.flowRows.filter(r => inRange(r.t) && flowOf(r));
+  const startT = fl.length ? fl[0].t : RANGE.from;
+  const s0 = new Date(Math.max(RANGE.from, startT)), e0 = new Date(RANGE.to);
+  const months = []; for (let y=s0.getUTCFullYear(), mo=s0.getUTCMonth(); Date.UTC(y,mo,1) <= Date.UTC(e0.getUTCFullYear(), e0.getUTCMonth(), 1); ) { months.push({y, mo}); mo++; if (mo===12){mo=0;y++;} }
+  const gran = months.length > 60 ? 'y' : (months.length > 30 ? 'q' : 'm');
+  const buckets = []; const bKey = {};
+  const keyOf = (y,mo) => gran==='y' ? String(y) : (gran==='q' ? y+'-Q'+(Math.floor(mo/3)+1) : y+'-'+mo);
+  const labOf = (y,mo) => gran==='y' ? String(y) : (gran==='q' ? 'Q'+(Math.floor(mo/3)+1)+'-'+String(y).slice(2) : MESES[mo]+'-'+String(y).slice(2));
+  months.forEach(({y,mo}) => { const k = keyOf(y,mo); if (!(k in bKey)) { bKey[k] = buckets.length; buckets.push({label: labOf(y,mo)}); } });
+  const bucketOf = t => { const d = new Date(t); return bKey[keyOf(d.getUTCFullYear(), d.getUTCMonth())]; };
+  const zero = () => buckets.map(()=>0);
+  const agg = {hon:0, renta:0, gasto:0, murillo:0};
+  const clientes = {}, rentas = {}, gastos = {};
+  fl.forEach(r => {
+    const f = flowOf(r);
+    const v = cv(f.usd, r.t), k = bucketOf(r.t); if (k == null) return;
+    if (f.kind==='hon') { agg.hon += v; (clientes[f.sub] = clientes[f.sub] || zero())[k] += v; }
+    else if (f.kind==='renta') { agg.renta += v; (rentas[f.sub] = rentas[f.sub] || zero())[k] += v; }
+    else if (f.kind==='murillo') agg.murillo += v;
+    else { agg.gasto += v; gastos[f.sub] = (gastos[f.sub]||0) + v; }
+  });
+  const pl = RANGE.preset === 'custom' ? rangeLabel() : (PRESETS.find(x=>x.id===RANGE.preset)||{}).label.toLowerCase();
+  const gShort = {'Gastos personales':'Personales','Gastos en pesos (venta de USD)':'Ventas de USD para pesos','Comisiones y gastos de inversión':'Comisiones de inversión'};
+  const sum = a => a.reduce((s,v)=>s+v,0);
+  const gSub = Object.entries(gastos).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${gShort[k]||k} <b>${money(v)}</b>`).join(' · ');
+  const rSub = ['Cupones','Dividendos','Intereses'].filter(x=>rentas[x]).map(x=>`${x} <b>${money(sum(rentas[x]))}</b>`).join(' · ');
+  const cSub = Object.keys(clientes).sort((a,b)=>sum(clientes[b])-sum(clientes[a])).map(c=>`${esc(c)} <b>${money(sum(clientes[c]))}</b>`).join(' · ');
+  const k = [
+    {l:'Honorarios cobrados', v:money(agg.hon), c:'kpi-blue', s:cSub || 'Sin cobros en el período'},
+    {l:'Rentas cobradas', v:money(agg.renta), c:'kpi-purple', s:rSub || 'Sin rentas en el período'},
+    {l:'Gastos', v:money(agg.gasto), c:'kpi-orange', s:gSub || 'Sin gastos en el período'}
+  ];
+  document.getElementById('kpi-period').innerHTML = k.map(x=>`<div class="kpi ${x.c}"><div class="kpi-label">${x.l} · ${esc(pl)}</div><div class="kpi-val">${x.v}</div><div class="kpi-sub">${x.s}</div></div>`).join('');
+
+  const labels = buckets.map(b=>b.label);
+  const cl = Object.keys(clientes).sort((a,b)=>sum(clientes[b])-sum(clientes[a]));
+  document.getElementById('lg-clientes').innerHTML = cl.length ? cl.map((c,i)=>`<span><span class="dot" style="background:${css(CLIENT_COLORS[i%6])}"></span>${esc(c)}</span>`).join('') : '<span>Sin cobros en el período</span>';
+  draw('ch-clientes', {type:'bar', data:{labels, datasets: cl.map((c,i)=>({label:c, data:clientes[c], backgroundColor:css(CLIENT_COLORS[i%6]), borderColor:css('--surface'), borderWidth:{top:2}, borderSkipped:false, maxBarThickness:34}))},
+    options: baseOpts('hs-clientes', {scales:{x:{stacked:true}, y:{stacked:true}}})}, 'hs-clientes');
+
+  const rk = ['Cupones','Dividendos','Intereses'].filter(x=>rentas[x]);
+  document.getElementById('lg-rentas').innerHTML = rk.length ? rk.map(x=>`<span><span class="dot" style="background:${css(RENTA_COLORS[x])}"></span>${x}</span>`).join('') : '<span>Sin rentas en el período</span>';
+  draw('ch-rentas', {type:'bar', data:{labels, datasets: rk.map(x=>({label:x, data:rentas[x], backgroundColor:css(RENTA_COLORS[x]), borderColor:css('--surface'), borderWidth:{top:2}, borderSkipped:false, maxBarThickness:34}))},
+    options: baseOpts('hs-rentas', {scales:{x:{stacked:true}, y:{stacked:true}}})}, 'hs-rentas');
+
+  // evolución: fin de cada mes del período + hoy a precio de mercado
+  const evIdx = monthCols.map((c,i)=>i); // siempre todo el histórico mes a mes, independiente del rango elegido
+  const ev = evIdx.map(i=>stateAt(Math.min(monthCols[i].end, Date.now())));
+  const lastIsCurrent = evIdx.length && monthCols[evIdx[evIdx.length-1]].end >= PRICE_T;
+  const mk = evIdx.map((i,j) => (j===evIdx.length-1 && lastIsCurrent) ? cv(M.liq+M.inv) : null);
+  draw('ch-evol', {type:'line', data:{labels:evIdx.map(i=>monthCols[i].label), datasets:[
+      {label:'Patrimonio (inversiones al costo)', data:ev.map((s,j)=>cv(s.liq+s.cost, monthCols[evIdx[j]].end)), borderColor:css('--s1'), backgroundColor:'rgba(57,135,229,.12)', fill:true, borderWidth:2, pointRadius:3, tension:0},
+      {label:'Liquidez', data:ev.map((s,j)=>cv(s.liq, monthCols[evIdx[j]].end)), borderColor:css('--liq'), backgroundColor:css('--liq'), borderWidth:2, pointRadius:3, tension:0},
+      {label:'Hoy a precio de mercado', data:mk, borderColor:css('--s2'), backgroundColor:css('--s2'), showLine:false, pointRadius:7, pointHoverRadius:8, pointBorderColor:css('--surface'), pointBorderWidth:2}]},
+    plugins:[{id:'ptLabels', afterDatasetsDraw(ch){ const {ctx}=ch; const n=ch.data.labels.length; const step = n>14 ? 2 : 1; ctx.save(); ctx.font='11px -apple-system, Segoe UI, Arial'; ctx.textAlign='center';
+      [[0,-10,'--text'],[1,16,'--text2'],[2,-14,'--s2']].forEach(([di,dy,col])=>{ const meta=ch.getDatasetMeta(di); if (meta.hidden) return; ctx.fillStyle=css(col);
+        meta.data.forEach((pt,i)=>{ const v=ch.data.datasets[di].data[i]; if (v==null) return; if (di<2 && i%step && i!==n-1) return; if (di===0 && mk[i]!=null) return; ctx.textAlign = i===0 ? 'left' : (i===n-1 ? 'right' : 'center'); ctx.fillText(short(v), pt.x + (i===0?4:(i===n-1?-4:0)), pt.y+dy); }); }); ctx.restore(); }}],
+    options: baseOpts('hs-evol', {layout:{padding:{top:18, left:10, right:24}}, scales:{y:{beginAtZero:true}}, plugins:{tooltip: stripTooltip('hs-evol', pts => {
+      const items = pts.filter(p=>p.parsed.y!=null).map(p=>`<span class="hs-item"><span class="dot" style="background:${p.dataset.borderColor}"></span>${esc(p.dataset.label)} <b>${money(p.parsed.y)}</b></span>`).join('');
+      return `<b>${esc(pts[0].label)}</b>${items}`; })}})}, 'hs-evol');
+
+  renderMovFilters(); renderMovs();
+}
+function stateAt(T){
+  let liq = 0; const q = {}, cost = {};
+  M.rows.forEach(r => {
+    if (r.t > T || r.m === 'Valuacion') return;
+    if (CASH.has(r.mon) && r.af !== 'NO') liq += sgn(r) * (r.mon==='PESOS' ? r.amt/mep(T) : r.amt);
+    if (INSTR.has(r.mon) && r.s && !EXCLUIDOS(r.s, r.t)) {
+      const k = r.b+'|'+r.s; q[k]=q[k]||0; cost[k]=cost[k]||0;
+      if (r.op==='INGRESO') { q[k]+= (r.q||0); cost[k]+=usdOf(r); }
+      else { const qs=r.q||0; const avg=q[k]?cost[k]/q[k]:0; cost[k]-=avg*qs; q[k]-=qs; if (Math.abs(q[k])<1e-6){q[k]=0;cost[k]=0;} }
+    }
+  });
+  return {liq, cost: Object.values(cost).reduce((s,v)=>s+v,0)};
+}
+
+// ══ MOVIMIENTOS ══
+function movBase(){ return M.rows.filter(r => inRange(r.t)); }
+// Filtros con selección múltiple (vacío = todos)
+const MS = {
+  lugar: {id:'ms-lugar', label:'Lugar', all:'Todos los lugares', get:r=>r.b, sel:new Set(), opts:[]},
+  mov:   {id:'ms-mov', label:'Movimiento', all:'Todos los movimientos', get:r=>r.m, sel:new Set(), opts:[]},
+  esp:   {id:'ms-esp', label:'Especie', all:'Todas las especies', get:r=>r.s, sel:new Set(), opts:[]}
+};
+let msOpen = null;
+function msRender(key){
+  const f = MS[key], box = document.getElementById(f.id);
+  const txt = !f.sel.size ? f.all : (f.sel.size === 1 ? [...f.sel][0] : `${f.label}: ${f.sel.size} elegidos`);
+  box.innerHTML = `<button type="button" class="ms-btn ${f.sel.size?'on':''}" aria-haspopup="true" aria-expanded="${msOpen===key}">${esc(txt)}</button>` +
+    (msOpen === key ? `<div class="ms-pop"><div class="ms-actions"><button type="button" data-a="all">Todos</button><button type="button" data-a="close">Listo</button></div>` +
+      f.opts.map(o=>`<label><input type="checkbox" value="${esc(o)}" ${f.sel.has(o)?'checked':''}>${esc(o)}</label>`).join('') + '</div>' : '');
+  box.querySelector('.ms-btn').onclick = e => { e.stopPropagation(); const was = msOpen; msOpen = (was === key ? null : key); Object.keys(MS).forEach(msRender); };
+  const pop = box.querySelector('.ms-pop'); if (!pop) return;
+  pop.addEventListener('click', e => e.stopPropagation());
+  pop.querySelectorAll('input').forEach(cb => cb.onchange = () => { cb.checked ? f.sel.add(cb.value) : f.sel.delete(cb.value); msRender(key); renderMovs(); });
+  pop.querySelector('[data-a="all"]').onclick = () => { f.sel.clear(); msRender(key); renderMovs(); };
+  pop.querySelector('[data-a="close"]').onclick = () => { msOpen = null; msRender(key); };
+}
+document.addEventListener('click', () => { if (msOpen) { const k = msOpen; msOpen = null; msRender(k); } });
+function renderMovFilters(){
+  const base = movBase();
+  Object.values(MS).forEach(f => { f.opts = [...new Set(base.map(f.get).filter(Boolean))].sort((a,b)=>a.localeCompare(b)); f.sel.forEach(v => { if (!f.opts.includes(v)) f.sel.delete(v); }); });
+  Object.keys(MS).forEach(msRender);
+}
+const MOV_COLS = [
+  {key:'t', label:'Fecha', get:r=>r.t},
+  {key:'d', label:'Descripción', l:true, get:r=>r.d},
+  {key:'b', label:'Lugar', l:true, get:r=>r.b},
+  {key:'m', label:'Movimiento', l:true, get:r=>r.m},
+  {key:'s', label:'Especie', l:true, get:r=>r.s},
+  {key:'q', label:'Cantidad', get:r=>INSTR.has(r.mon)&&r.q?sgn(r)*r.q:-1e15},
+  {key:'mon', label:'Moneda', l:true, get:r=>r.mon},
+  {key:'amt', label:'Monto original', get:r=>sgn(r)*r.amt},
+  {key:'cvt', label:'En moneda elegida', get:r=>INSTR.has(r.mon)?-1e15:sgn(r)*usdOf(r)}
+];
+function renderMovs(){
+  const qv = document.getElementById('mov-search').value.trim().toLowerCase();
+  const pass = (f, r) => !f.sel.size || f.sel.has(f.get(r));
+  const col = MOV_COLS.find(c=>c.key===movSort.key) || MOV_COLS[0];
+  const shown = movBase().filter(r => pass(MS.lugar,r) && pass(MS.mov,r) && pass(MS.esp,r) && (!qv || (r.d+' '+r.cli+' '+r.cat+' '+r.s).toLowerCase().includes(qv)))
+    .sort((a,b)=>{ const va=col.get(a), vb=col.get(b); return ((typeof va==='string' ? va.localeCompare(vb) : va-vb) * movSort.dir) || (a.n-b.n); });
+  document.getElementById('mov-count').textContent = `${shown.length} movimientos`;
+  const head = '<thead><tr>' + MOV_COLS.map(c=>`<th class="sortable ${c.l?'l':''}" tabindex="0" data-key="${c.key}">${c.key==='cvt'?(CUR==='ARS'?'En pesos':'En USD MEP'):c.label}<span class="arrow">${movSort.key===c.key?(movSort.dir>0?'▲':'▼'):''}</span></th>`).join('') + '</tr></thead>';
+  const body = shown.map(r => { const s = sgn(r); const isInstr = INSTR.has(r.mon);
+      const orig = (r.mon==='PESOS'||r.mon==='FCI' ? '$ ' : 'US$ ') + (s<0?'−':'') + nf2.format(r.amt);
+      const qtxt = isInstr && r.q ? (s>0?'+':'−') + qty(r.q) : '';
+      return `<tr><td>${dfmt(r.t)}</td><td class="l" style="white-space:normal;min-width:240px;color:var(--text)">${esc(r.d)}</td><td class="l">${esc(r.b)}</td><td class="l">${esc(r.m)}${r.cli?`<span class="tag">${esc(r.cli)}</span>`:''}</td><td class="l">${r.s?`<span class="sym">${esc(r.s)}</span>`:''}</td>
+        <td class="${isInstr?(s>0?'pos':'neg'):''}">${qtxt}</td><td class="l">${esc(r.mon)}</td>
+        <td class="${isInstr?'muted':(s<0?'neg':'pos')}" ${isInstr?'title="Valor de la especie que entra o sale (no es efectivo)"':''}>${orig}</td>
+        <td class="${isInstr?'muted':''}">${isInstr?'—':money(cv(usdOf(r)*s, r.t))}</td></tr>`; }).join('');
+  const t = document.getElementById('tbl-mov'); t.innerHTML = head + '<tbody>' + (body || '<tr><td class="muted" colspan="9">No hay movimientos con esos filtros.</td></tr>') + '</tbody>';
+  t.querySelectorAll('th.sortable').forEach(th => { const go = () => { const k = th.dataset.key; movSort = {key:k, dir: movSort.key===k ? -movSort.dir : (k==='t'?-1:1)}; renderMovs(); };
+    th.onclick = go; th.onkeydown = e => { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); go(); } }; });
+}
+document.getElementById('mov-search').addEventListener('input', renderMovs);
+
+// ══ CARGA DE EXCEL ══
+function parseWorkbook(buf){
+  const wb = XLSX.read(buf, {type:'array', cellDates:true});
+  const ws = wb.Sheets['BASE']; if (!ws) throw new Error('El archivo no tiene una hoja llamada BASE.');
+  const aoa = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
+  const hi = aoa.findIndex(r => r && r.includes('FECHA') && r.includes('DESCRIPCION'));
+  if (hi < 0) throw new Error('No encontré la fila de títulos (FECHA, DESCRIPCION…) en la hoja BASE.');
+  const H = aoa[hi]; const col = n => H.indexOf(n);
+  const need = ['FECHA','DESCRIPCION','BROKER','MOVIMIENTO','OPERACIÓN','MONEDA','MONTO'];
+  const miss = need.filter(n=>col(n)<0); if (miss.length) throw new Error('Faltan columnas en BASE: '+miss.join(', '));
+  const out = [];
+  aoa.slice(hi+1).forEach(r => {
+    if (!r) return; let f = r[col('FECHA')]; if (f == null || f === '') return;
+    if (typeof f === 'number') f = new Date(Math.round((f - 25569) * DAY));
+    if (!(f instanceof Date) || isNaN(f)) return;
+    const iso = new Date(Date.UTC(f.getFullYear(), f.getMonth(), f.getDate() + (f.getHours()>=12?1:0))).toISOString().slice(0,10);
+    const g = n => col(n) >= 0 ? r[col(n)] : null;
+    out.push([iso, g('DESCRIPCION'), g('BROKER'), g('INSTRUMENTO'), g('SIMBOLO'), g('MOVIMIENTO'), g('OPERACIÓN'), g('MONEDA'),
+      typeof g('Q NOMINALES')==='number'?g('Q NOMINALES'):null, typeof g('MONTO')==='number'?g('MONTO'):null, g('CLIENTE'), g('CATEGORÍA'), g('AFECTA SALDO')||'SI']);
+  });
+  if (!out.length) throw new Error('La hoja BASE no tiene movimientos.');
+  return out;
+}
+function notice(msg, err){ const n=document.getElementById('notice'); n.innerHTML = msg ? `<div class="notice ${err?'err':''}">${esc(msg)}</div>` : ''; }
+document.getElementById('xlsx-input').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  const rd = new FileReader();
+  rd.onload = () => { try { const arr = parseWorkbook(new Uint8Array(rd.result)); loadRows(arr, 'file', file.name);
+      try { localStorage.setItem('cajaJavier.rows.v1', JSON.stringify({name:file.name, at:Date.now(), rows:arr})); } catch(_) {}
+      notice(`Listo: cargué ${arr.length} movimientos de ${file.name}. Los precios son los del estado de cuenta de PPI del ${dfmt(PRICE_T)}.`);
+    } catch(err) { notice('No pude leer el archivo. ' + err.message, true); } e.target.value=''; };
+  rd.readAsArrayBuffer(file);
+});
+document.getElementById('reset-data').addEventListener('click', () => { try { localStorage.removeItem('cajaJavier.rows.v1'); } catch(_) {} loadRows(EMBEDDED_ROWS,'embedded',''); notice('Volví a los datos originales del dashboard.'); });
+function setCur(c){ CUR = c; document.getElementById('cur-usd').classList.toggle('active', c==='USD'); document.getElementById('cur-ars').classList.toggle('active', c==='ARS'); renderToday(); renderPeriod(); }
+document.getElementById('cur-usd').onclick = () => setCur('USD');
+document.getElementById('cur-ars').onclick = () => setCur('ARS');
+
+function loadRows(arr, source, name){
+  ROWS = arr.map(toRow).filter(r=>!isNaN(r.t));
+  M = buildModel(); monthCols = buildMonthCols();
+  const [f0, t0] = presetRange('all'); RANGE = {from:f0, to:t0, preset:'all'};
+  document.getElementById('reset-data').hidden = source === 'embedded';
+  document.getElementById('data-meta').innerHTML = `<span>Movimientos hasta <b>${dfmt(M.lastT)}</b> (${ROWS.length})</span><span>Fuente <b>${source==='embedded'?'CAJA NUEVA.xlsx':esc(name)}</b></span><span>Precios <b>PPI ${dfmt(PRICE_T)}</b></span><span>Dólar MEP <b>$ ${nf2.format(PRICES.mep)}</b></span>`;
+  renderToday(); syncRangeUI(); renderPeriod(); renderFooter();
+}
+function renderFooter(){
+  const ppiLiq = M.places.PPI ? M.places.PPI.liq : 0, ppiInv = M.places.PPI ? M.places.PPI.inv : 0;
+  document.getElementById('footer').innerHTML = `
+    <p><b>Precio promedio y resultado.</b> Como PPI: el precio promedio de compra es el costo total dividido la cantidad (ponderado por cantidad); al vender sale del costo la parte proporcional y el precio promedio no cambia; la diferencia con lo cobrado es ganancia realizada. "% resultado" = resultado total (no realizado + realizado + rentas) sobre todo lo que pusiste en esa especie. Las compras en pesos y los FCI se pasan a dólares con el MEP de esa fecha. Splits y canjes suman cantidad sin costo. Las comisiones de compra no se suman al costo (igual que PPI); están en Gastos. Las filas "Valuacion" no se usan. Los fondos Alpha del ICBC y el Nov. Liq. de PPI (rescatados en 2025) quedan fuera del análisis de inversiones; sus movimientos siguen en la base y lo rescatado está en los saldos de caja.</p>
+    <p><b>TIR anual.</b> Es la tasa en dólares que iguala lo que pusiste con lo que recibiste: cada compra cuenta como plata que salió en su fecha; cada venta, cupón y dividendo como plata que entró en su fecha; y lo que todavía tenés, a su valor del ${dfmt(PRICE_T)}, como si lo vendieras ese día. No incluye la liquidez. Por especie no se muestra con menos de un año de tenencia, porque al anualizar exagera.</p>
+    <p><b>Precios.</b> Estado de cuenta de PPI del ${dfmt(PRICE_T)}: valor corriente en pesos de cada especie dividido el dólar bolsa (AL30/AL30D) que informa PPI ($ ${nf2.format(PRICES.mep)}). Los saldos de caja salen de tu base; el renglón de control de arriba los compara con PPI. KO y MELI (ICBC) van al costo porque no tienen precio cargado.</p>
+    <p><b>Cobros futuros.</b> Cronogramas de las condiciones de emisión: GD35 (cupón escalonado y 10 amortizaciones semestrales desde 2031), ON YPF 7% 2033 (4 amortizaciones anuales desde 2030) y ON YPF 8,75% 2031 (amortiza 20% en 2029, 20% en 2030 y 60% en 2031).</p>
+    <p><b>Dólar MEP histórico.</b> Estimado con las cotizaciones de tus propias operaciones e interpolado entre fechas. Se reemplaza por la serie diaria real cuando conectemos la API de PPI.</p>
+    <p><b>Cargar estado de cuenta PPI.</b> En PPI, en Estado de cuenta, elegí la fecha, tocá Exportar y bajá el PDF. En el dashboard tocá "Cargar estado de cuenta PPI" y elegí ese PDF. Se leen las especies con su cantidad y valor corriente en pesos, los saldos (pesos, dólares MEP y CCL) y el dólar bolsa que informa PPI; el valor en dólares de cada especie es su valor en pesos dividido ese dólar. Si el PDF es el más reciente, pasa a ser la valuación de hoy y el renglón de control compara cantidades, saldos y total contra tu base. Si es de una fecha anterior (por ejemplo, un cierre al 31/12), se guarda como histórico y se usa para el rendimiento por año. El PDF se lee en tu navegador, no se sube a ningún lado, y lo cargado queda guardado en este navegador.</p>
+    <p><b>Rendimiento por año.</b> Solo las inversiones en PPI. Para cada año: (valor al final − valor al inicio − lo que pusiste + lo que retiraste en ventas, cupones y dividendos) sobre el valor al inicio más lo puesto en el año, ponderado por los días que estuvo invertido (método Dietz modificado). El año en curso muestra lo que va del año, sin anualizar.</p>
+    <p><b>Cargar Excel actualizado.</b> Abre el selector de archivos de tu computadora para que elijas CAJA NUEVA. El archivo se lee en tu navegador, no se sube a ningún lado, y la última carga queda guardada en este navegador.</p>`;
+}
+
+// ══ RENDIMIENTO POR AÑO (inversiones en PPI) ══
+function closeOf(y){ // estado de cuenta más cercano al 31/12/y (entre el 15/12 y el 10/01)
+  const target = Date.UTC(y,11,31); let best = null;
+  Object.values(HIST).forEach(h => { const t = Date.parse(h.date); if (t >= Date.UTC(y,11,15) && t <= Date.UTC(y+1,0,10) && (!best || Math.abs(t-target) < Math.abs(Date.parse(best.date)-target))) best = h; });
+  return best;
+}
+const stmtValue = h => Object.entries(h.items).reduce((s,[sym,it]) => s + (EXCLUIDOS(sym, Date.parse(h.date)) ? 0 : it.valor), 0);
+function ppiQtyAt(T){ const q = {}; M.rows.forEach(r => { if (r.t > T || r.b !== 'PPI' || !INSTR.has(r.mon) || !r.s || r.m === 'Valuacion' || EXCLUIDOS(r.s, r.t)) return; q[r.s] = (q[r.s]||0) + sgn(r)*(r.q||0); }); return Object.values(q).some(v => v > 1e-6); }
+function yearlyReturns(){
+  const ppiPos = M.pos.filter(p => p.b === 'PPI');
+  const flows = ppiPos.flatMap(p => p.flows);
+  if (!flows.length) return [];
+  const y0 = new Date(Math.min(...flows.map(f=>f[0]))).getUTCFullYear(), yN = new Date(PRICE_T).getUTCFullYear();
+  const out = [];
+  for (let y = y0; y <= yN; y++) {
+    const T0 = Date.UTC(y-1,11,31), cur = (y === yN);
+    const endH = cur ? PRICES : closeOf(y), T1 = endH ? Date.parse(endH.date) : Date.UTC(y,11,31);
+    const held0 = ppiQtyAt(T0), startH = held0 ? closeOf(y-1) : null;
+    const row = {y, cur, endDate: T1};
+    if (held0 && !startH) { row.missing = `Falta el estado de cuenta al 31/12/${y-1}`; }
+    if (!endH) { row.missing = (row.missing ? row.missing.replace('Falta el estado de cuenta al', 'Faltan los estados al') + ` y al 31/12/${y}` : `Falta el estado de cuenta al 31/12/${y}`); }
+    if (!row.missing) {
+      const V0 = held0 ? stmtValue(startH) : 0, V1 = stmtValue(endH);
+      const tStart = held0 ? Date.parse(startH.date) : T0;
+      const fl = flows.filter(f => f[0] > tStart && f[0] <= T1);
+      const contrib = fl.reduce((s,f)=>s - f[1], 0);         // compras − (ventas + rentas)
+      const wC = fl.reduce((s,f)=>s + (-f[1]) * (T1 - f[0]) / (T1 - tStart), 0);
+      row.src = endH.source === 'Estado de cuenta PPI' || !endH.source ? `Estado de cuenta PPI ${dfmt(Date.parse(endH.date))}` : endH.source;
+      row.V0 = V0; row.V1 = V1; row.net = contrib; row.gain = V1 - V0 - contrib; row.ret = (V0 + wC) > 0 ? row.gain / (V0 + wC) : null;
+    }
+    out.push(row);
+  }
+  return out;
+}
+function renderAnual(){
+  const rows = yearlyReturns();
+  const ok = rows.filter(r => r.ret != null);
+  const lab = r => r.cur ? `${r.y} (al ${dfmt(r.endDate).slice(0,5)})` : String(r.y);
+  draw('ch-anual', {type:'bar', data:{labels: ok.map(lab), datasets:[{label:'Rendimiento', data: ok.map(r=>r.ret*100), backgroundColor: ok.map(r=>r.ret>=0?css('--green'):css('--red')), borderRadius:4, borderSkipped:false, maxBarThickness:48}]},
+    options: baseOpts('hs-anual', {layout:{padding:{top:22}}, scales:{y:{ticks:{callback:v=>nf0.format(v)+'%'}}}, plugins:{tooltip: stripTooltip('hs-anual', pts => { const r = ok[pts[0].dataIndex];
+      return `<b>${lab(r)}</b><span class="hs-item">Rendimiento <b>${pct(r.ret)}</b></span><span class="hs-item">Ganancia <b>${money(cv(r.gain),{plus:true})}</b></span>`; })}}),
+    plugins:[{id:'lbl', afterDatasetsDraw(ch){ const {ctx}=ch; ctx.save(); ctx.font='600 12px -apple-system, Segoe UI, Arial'; ctx.textAlign='center'; ch.getDatasetMeta(0).data.forEach((b,i)=>{ const v=ok[i].ret; ctx.fillStyle = v>=0?css('--green'):css('--red'); ctx.fillText(pct(v), b.x, v>=0 ? b.y-6 : b.y+14); }); ctx.restore(); }}]}, 'hs-anual');
+  if (!ok.length) document.getElementById('hs-anual').innerHTML = '<span>Todavía no hay años completos para calcular: cargá los estados de cuenta de PPI de cierre de año (ver la tabla).</span>';
+  const show = rows.filter(r => r.ret != null || r.y >= new Date(PRICE_T).getUTCFullYear() - 2);
+  document.getElementById('tbl-anual').innerHTML = `<thead><tr><th>Año</th><th>Valor al inicio</th><th>Puesto − retirado</th><th>Valor al final</th><th>Ganancia</th><th>Rendimiento</th></tr></thead><tbody>` +
+    show.slice().reverse().map(r => r.missing ? `<tr><td>${lab(r)}</td><td class="l muted" colspan="5" style="white-space:normal">${r.missing}</td></tr>` :
+      `<tr><td>${lab(r)}</td><td>${money(cv(r.V0))}</td><td>${money(cv(r.net),{plus:true})}</td><td>${money(cv(r.V1))}</td><td class="${cls(r.gain)}">${money(cv(r.gain),{plus:true})}</td><td class="${cls(r.ret)}" style="font-weight:600">${pct(r.ret)}</td></tr>`).join('') + '</tbody>';
+}
+
+function compareWithPPI(h){
+  const T = Date.parse(h.date) + DAY - 1; const q = {}, c = {};
+  M.rows.forEach(r => { if (r.t > T || r.b !== 'PPI' || r.m === 'Valuacion') return;
+    if (INSTR.has(r.mon) && r.s) q[r.s] = (q[r.s]||0) + sgn(r)*(r.q||0);
+    if (CASH.has(r.mon) && r.af !== 'NO') c[r.mon] = (c[r.mon]||0) + sgn(r)*r.amt; });
+  const qd = [], sd = [];
+  new Set([...Object.keys(q).filter(k=>Math.abs(q[k])>1e-6), ...Object.keys(h.items)]).forEach(s => { const a = q[s]||0, b = (h.items[s]||{}).q||0; if (Math.abs(a-b) > 0.01) qd.push(`${s}: base ${qty(a)} · PPI ${qty(b)}`); });
+  if (h.saldos) [['PESOS','$'],['USD','US$ MEP'],['USD CCL','US$ CCL']].forEach(([k,lab]) => { const a = c[k]||0, b = h.saldos[k]; if (b != null && Math.abs(a-b) > 0.5) sd.push(`${lab}: base ${nf2.format(a)} · PPI ${nf2.format(b)}`); });
+  return {qd, sd};
+}
+
+// ══ CONTROL CONTRA PPI ══
+function renderControl(){
+  const el = document.getElementById('ppi-control'); if (!el) return;
+  const parts = []; const tol = 0.5;
+  const pl = M.places.PPI || {liq:0, inv:0}; const dash = pl.liq + pl.inv;
+  if (PRICES.ppiTotal) { const d = dash - PRICES.ppiTotal; parts.push(`Control con PPI al ${dfmt(PRICE_T)}: total PPI <b>US$ ${nf2.format(PRICES.ppiTotal)}</b> · dashboard <b>US$ ${nf2.format(dash)}</b> ${Math.abs(d) < 5 ? '<span class="ok">✓ coincide</span>' : `<span class="warn">diferencia US$ ${nf2.format(d)}</span>`}`); }
+  const qd = [];
+  const baseQ = {}; M.pos.filter(p => p.b==='PPI' && p.open).forEach(p => baseQ[p.s] = p.q);
+  new Set([...Object.keys(baseQ), ...Object.keys(PRICES.items)]).forEach(s => { const a = baseQ[s]||0, b = (PRICES.items[s]||{}).q||0; if (Math.abs(a-b) > 0.01) qd.push(`${s}: base ${qty(a)} · PPI ${qty(b)}`); });
+  parts.push(qd.length ? `<span class="warn">Cantidades distintas → ${qd.join(' · ')}</span>` : '<span class="ok">✓ cantidades iguales a PPI</span>');
+  if (PRICES.saldos) {
+    const c = M.cash.PPI || {}; const sd = [];
+    [['PESOS','$'],['USD','US$ MEP'],['USD CCL','US$ CCL']].forEach(([k,lab]) => { const a = c[k]||0, b = PRICES.saldos[k]; if (b != null && Math.abs(a-b) > tol) sd.push(`${lab}: base ${nf2.format(a)} · PPI ${nf2.format(b)}`); });
+    parts.push(sd.length ? `<span class="warn">Saldos distintos → ${sd.join(' · ')}</span>` : '<span class="ok">✓ saldos iguales a PPI</span>');
+  }
+  el.innerHTML = parts.map(p => `<span>${p}</span>`).join('');
+}
+
+// ══ ESTADO DE CUENTA PPI (PDF) ══
+const numAR = s => parseFloat(String(s).replace(/\./g,'').replace(',','.'));
+let pdfReady = null;
+function loadPdfJs(){
+  if (pdfReady) return pdfReady;
+  const add = src => new Promise((ok, ko) => { const sc = document.createElement('script'); sc.src = src; sc.onload = ok; sc.onerror = () => ko(new Error('No pude cargar el lector de PDF (revisá la conexión a internet).')); document.head.appendChild(sc); });
+  pdfReady = add('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js').then(() => add('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'));
+  return pdfReady;
+}
+async function pdfLines(buf){
+  await loadPdfJs();
+  const doc = await pdfjsLib.getDocument({data: buf, isEvalSupported: false}).promise;
+  const lines = [];
+  for (let n = 1; n <= doc.numPages; n++) {
+    const page = await doc.getPage(n); const tc = await page.getTextContent();
+    const rows = {};
+    tc.items.forEach(it => { if (!it.str.trim()) return; const y = Math.round(it.transform[5] / 3) * 3; (rows[y] = rows[y] || []).push({x: it.transform[4], s: it.str}); });
+    Object.keys(rows).map(Number).sort((a,b)=>b-a).forEach(y => lines.push(rows[y].sort((a,b)=>a.x-b.x).map(i=>i.s.trim()).join(' ').replace(/\s+/g,' ')));
+  }
+  return lines;
+}
+function parsePPI(lines){
+  const txt = lines.join('\n');
+  const out = {items:{}, saldos:null, source:'Estado de cuenta PPI'};
+  let m = /Cuenta.*?(\d{2})\/(\d{2})\/(\d{4})/.exec(txt) || /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(txt);
+  if (!m) throw new Error('No encontré la fecha del estado de cuenta.');
+  out.date = `${m[3]}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`;
+  m = /al d[ií]a\s*\(\s*\$\s*([\d.]+,\d+)\s*\)/i.exec(txt); if (!m) throw new Error('No encontré el tipo de cambio (dólar bolsa) en el PDF.');
+  out.mep = numAR(m[1]);
+  m = /U\$D\s*([\d.]+,\d{2})/.exec(txt); out.ppiTotal = m ? numAR(m[1]) : null;
+  m = /Saldo hoy\s*\$\s*(-?[\d.]+,\d{2})\s*U\$D\s*(-?[\d.]+,\d{2})\s*U\$D\s*(-?[\d.]+,\d{2})/.exec(txt);
+  if (m) out.saldos = {PESOS: numAR(m[1]), 'USD CCL': numAR(m[2]), USD: numAR(m[3])};
+  const re = /^([A-Z0-9][A-Z0-9.]{1,11})\s+.*?(-?[\d.]+,\d{2})\s+(-?[\d.]+,\d{2})\s+(AR\$|US\$)\s*([\d.]+,\d+)\s+\$\s*(-?[\d.]+,\d{2})\s+[\d.,]+\s*%/;
+  lines.forEach(l => { const r = re.exec(l); if (!r || /^SUBTOTAL/.test(r[1])) return;
+    const ars = numAR(r[6]); out.items[r[1]] = {q: numAR(r[2]), valorArs: ars, valor: ars / out.mep, px: (r[4]==='AR$'?'$ ':'US$ ') + r[5]}; });
+  if (!Object.keys(out.items).length) throw new Error('No encontré especies en el PDF. ¿Es el estado de cuenta de PPI?');
+  return out;
+}
+function applyPrices(pr){
+  PRICES = pr; PRICE_T = Date.parse(pr.date); addMepPoint(pr.date, pr.mep);
+  M = buildModel(); renderToday(); renderPeriod(); renderFooter();
+  document.getElementById('data-meta').querySelectorAll('span')[2].innerHTML = `Precios <b>PPI ${dfmt(PRICE_T)}</b>`;
+  document.getElementById('data-meta').querySelectorAll('span')[3].innerHTML = `Dólar MEP <b>$ ${nf2.format(PRICES.mep)}</b>`;
+}
+document.getElementById('pdf-input').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  notice('Leyendo el estado de cuenta…');
+  try {
+    const pr = parsePPI(await pdfLines(new Uint8Array(await file.arrayBuffer())));
+    HIST[pr.date] = pr;
+    try { localStorage.setItem('cajaJavier.ppiHist.v1', JSON.stringify(HIST)); } catch(_) {}
+    if (Date.parse(pr.date) >= PRICE_T) {
+      applyPrices(pr);
+      try { localStorage.setItem('cajaJavier.ppi.v1', JSON.stringify(pr)); } catch(_) {}
+      notice(`Listo: precios y saldos de PPI al ${dfmt(PRICE_T)} (${Object.keys(pr.items).length} especies, dólar MEP $ ${nf2.format(pr.mep)}). Mirá el renglón de control debajo de "Hoy".`);
+    } else {
+      addMepPoint(pr.date, pr.mep); renderAnual();
+      notice(`Guardé el estado de cuenta del ${dfmt(Date.parse(pr.date))} como histórico (sirve para el rendimiento por año). Los precios de hoy siguen siendo los del ${dfmt(PRICE_T)}.`);
+    }
+  } catch(err) { notice('No pude leer el PDF. ' + err.message, true); }
+  e.target.value = '';
+});
+
+// ══ INICIO ══
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif";
+(function init(){
+  Object.values(EMBEDDED_HIST).forEach(h => addMepPoint(h.date, h.mep));
+  try { const h = JSON.parse(localStorage.getItem('cajaJavier.ppiHist.v1') || 'null'); if (h) Object.values(h).forEach(x => { if (x && x.items) { HIST[x.date] = x; addMepPoint(x.date, x.mep); } }); } catch(_) {}
+  try { const sp = JSON.parse(localStorage.getItem('cajaJavier.ppi.v1') || 'null'); if (sp && sp.items && Date.parse(sp.date) >= Date.parse(EMBEDDED_PRICES.date)) { PRICES = sp; PRICE_T = Date.parse(sp.date); addMepPoint(sp.date, sp.mep); } } catch(_) {}
+  let stored = null;
+  try { stored = JSON.parse(localStorage.getItem('cajaJavier.rows.v1') || 'null'); } catch(_) {}
+  if (stored && Array.isArray(stored.rows) && stored.rows.length) loadRows(stored.rows, 'file', stored.name + ' (cargado el ' + dfmt(stored.at) + ')');
+  else loadRows(EMBEDDED_ROWS, 'embedded', '');
+})();
+</script>
